@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# SQLite/runtime data
+backend/data/
+*.sqlite3
+
+# Node
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Environment
+.env
+.DS_Store
+
+#files
+doc/
