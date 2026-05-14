@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -48,8 +49,8 @@ class CollectionItem(Base):
     anime_id: Mapped[int] = mapped_column(ForeignKey("anime_master.id"), unique=True, index=True)
     organize_status: Mapped[str] = mapped_column(String(32), default="pending")
     note: Mapped[str | None] = mapped_column(Text)
-    release_tags: Mapped[str | None] = mapped_column(Text)
-    group_tags: Mapped[str | None] = mapped_column(Text)
+    release_tags: Mapped[list[str]] = mapped_column(MutableList.as_mutable(JSON), default=list)
+    group_tags: Mapped[list[str]] = mapped_column(MutableList.as_mutable(JSON), default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 

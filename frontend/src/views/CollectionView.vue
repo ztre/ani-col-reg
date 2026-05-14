@@ -98,10 +98,11 @@ import { Edit, Grid, List } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 
-import { listAnime } from '../api'
+import { splitTagValues } from '../animePresentation'
 import { collectionStageLabel, collectionStatusTagType, isWebReleaseTag } from '../collectionPresentation'
 import AnimeDialog from '../components/AnimeDialog.vue'
 import AnimeFilterBar from '../components/AnimeFilterBar.vue'
+import { listAnime } from '../services/animeService'
 import type { Anime, CollectionItem } from '../types'
 
 type CollectionLayoutMode = 'list' | 'cards'
@@ -151,11 +152,8 @@ function seasonLabel(season: number) {
   return labels[season] || String(season)
 }
 
-function splitTags(value?: string | null) {
-  return (value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
+function splitTags(value?: string[] | string | null) {
+  return splitTagValues(value)
 }
 
 function uniqueOptions(values: string[], selected: string[]) {
@@ -250,16 +248,16 @@ onMounted(load)
   justify-content: space-between;
   padding: 28px 30px;
   background:
-    radial-gradient(circle at top right, rgba(72, 139, 203, 0.18), transparent 28%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(250, 252, 255, 0.88));
-  border: 1px solid rgba(205, 214, 228, 0.72);
+    radial-gradient(circle at top right, rgba(72, 139, 203, 0.24), transparent 30%),
+    linear-gradient(135deg, rgba(13, 24, 41, 0.98), rgba(8, 16, 28, 0.94));
+  border: 1px solid var(--surface-line);
   border-radius: 28px;
-  box-shadow: 0 20px 60px rgba(24, 33, 47, 0.08);
+  box-shadow: 0 24px 60px rgba(2, 7, 15, 0.32);
 }
 
 .collection-eyebrow {
   margin: 0 0 8px;
-  color: #4d7db3;
+  color: var(--accent);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -274,7 +272,7 @@ onMounted(load)
 .collection-subcopy,
 .entry-main p {
   margin: 8px 0 0;
-  color: #5e6b7d;
+  color: var(--text-muted);
   line-height: 1.7;
 }
 
@@ -287,10 +285,10 @@ onMounted(load)
   display: inline-flex;
   gap: 8px;
   padding: 6px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(210, 219, 232, 0.88);
+  background: rgba(11, 20, 35, 0.82);
+  border: 1px solid var(--surface-line);
   border-radius: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .layout-switch-buttons :deep(.el-button) {
@@ -315,13 +313,13 @@ onMounted(load)
 }
 
 .collection-summary-title {
-  color: #233243;
+  color: var(--text-strong);
   font-size: 18px;
   font-weight: 700;
 }
 
 .collection-summary-subtitle {
-  color: #6f7d90;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -344,9 +342,9 @@ onMounted(load)
   align-items: center;
   min-height: 30px;
   padding: 0 12px;
-  color: #4b5a6d;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(215, 223, 235, 0.88);
+  color: var(--text-soft);
+  background: var(--surface-chip);
+  border: 1px solid var(--surface-line);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
@@ -367,10 +365,10 @@ onMounted(load)
 }
 
 .collection-entry {
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(214, 222, 234, 0.86);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-line);
   border-radius: 24px;
-  box-shadow: 0 16px 40px rgba(24, 33, 47, 0.06);
+  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.3);
 }
 
 .collection-entry--list {
@@ -394,7 +392,7 @@ onMounted(load)
   overflow: hidden;
   border-radius: 18px;
   aspect-ratio: 4 / 5;
-  background: linear-gradient(135deg, #d7e2f1, #ecf1f8);
+  background: linear-gradient(135deg, rgba(32, 53, 82, 0.94), rgba(8, 18, 31, 0.98));
 }
 
 .entry-poster img,
@@ -412,7 +410,7 @@ onMounted(load)
   display: grid;
   place-items: center;
   color: #ffffff;
-  background: linear-gradient(135deg, #5885c2, #253955);
+  background: linear-gradient(135deg, #5dacf4, #183252);
   font-size: 26px;
   font-weight: 800;
 }
@@ -428,7 +426,7 @@ onMounted(load)
 }
 
 .entry-main h2 {
-  color: #18212f;
+  color: var(--text-strong);
   font-size: 22px;
 }
 
@@ -446,7 +444,7 @@ onMounted(load)
 }
 
 .collection-entry--cards .entry-note {
-  color: #607084;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.55;
   display: -webkit-box;
@@ -456,7 +454,7 @@ onMounted(load)
 }
 
 .entry-meta {
-  color: #4d7db3;
+  color: var(--accent);
   font-size: 13px;
   font-weight: 700;
 }

@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.api import auth_status, clear_cover_cache_maintenance, get_app_settings, login, update_app_settings
+from app.api import auth_status, clear_cover_cache_maintenance, get_app_settings, login, reset_collection_maintenance, update_app_settings
 from app.database import Base
 from app.models import AnimeMapping, AnimeMaster, CollectionItem, EpisodeProgress
 from app.schemas import AppSettingsUpdate, LoginRequest
@@ -101,7 +101,7 @@ def test_settings_include_sync_defaults_and_cover_cache_actions(tmp_path, monkey
     db.commit()
 
     monkeypatch.setattr(
-        "app.api.get_settings",
+        "app.routes.common.get_settings",
         lambda: SimpleNamespace(
             cover_cache_dir=cache_dir,
             cover_cache_public_path="/api/covers",
@@ -131,8 +131,9 @@ def test_settings_include_sync_defaults_and_cover_cache_actions(tmp_path, monkey
     assert db.scalar(select(func.count()).select_from(AnimeMapping)) == 0
     assert db.scalar(select(func.count()).select_from(EpisodeProgress)) == 0
 
-    current = get_app_settings(store=store)
+    current = get_app_settings(store=store, db=db)
     assert current.default_filter_group_tag == "ANi"
+    assert current.collection_count == 0
     assert current.cover_cache_total_bytes == 0
 
     (cache_dir / "gamma.webp").write_bytes(b"cover-c")
@@ -158,3 +159,45 @@ def test_settings_include_sync_defaults_and_cover_cache_actions(tmp_path, monkey
     refreshed_anime = db.get(AnimeMaster, anime.id)
     assert refreshed_anime is not None
     assert refreshed_anime.cover_url is None
+
+
+def test_reset_collection_maintenance_only_clears_collection_items(tmp_path) -> None:
+    store = make_store(tmp_path)
+    db = make_session()
+
+    anime = AnimeMaster(
+        source="youranimes",
+        source_id="collection-reset-alpha",
+        source_url="https://youranimes.tw/animes/collection-reset-alpha",
+        title_cn="收藏重置测试番",
+        normalized_title=normalize_title("收藏重置测试番"),
+        year=2026,
+        season=2,
+    )
+    db.add(anime)
+    db.commit()
+    db.refresh(anime)
+
+    db.add_all(
+        [
+            CollectionItem(anime_id=anime.id, note="待清理"),
+            AnimeMapping(anime_id=anime.id, mgr_item_id="mgr-reset-alpha"),
+            EpisodeProgress(anime_id=anime.id, watched_eps=4),
+        ]
+    )
+    db.commit()
+
+    before_reset = get_app_settings(store=store, db=db)
+    assert before_reset.collection_count == 1
+
+    reset = reset_collection_maintenance(db=db)
+
+    assert reset.deleted_collections == 1
+    assert reset.remaining_collections == 0
+
+    after_reset = get_app_settings(store=store, db=db)
+    assert after_reset.collection_count == 0
+    assert db.scalar(select(func.count()).select_from(AnimeMaster)) == 1
+    assert db.scalar(select(func.count()).select_from(CollectionItem)) == 0
+    assert db.scalar(select(func.count()).select_from(AnimeMapping)) == 1
+    assert db.scalar(select(func.count()).select_from(EpisodeProgress)) == 1

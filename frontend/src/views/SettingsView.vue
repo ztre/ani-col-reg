@@ -75,7 +75,7 @@
 
             <div class="tag-manager-entry">
               <el-input v-model="releaseTagDraft" size="large" placeholder="新增资源标签" @keyup.enter="addManagedTag('release')" />
-              <el-button @click="addManagedTag('release')">添加</el-button>
+              <el-button class="tag-manager-add" @click="addManagedTag('release')">添加</el-button>
             </div>
 
             <div v-if="releaseTagLibrary.length" class="tag-chip-list">
@@ -96,7 +96,7 @@
 
             <div class="tag-manager-entry">
               <el-input v-model="groupTagDraft" size="large" placeholder="新增字幕组 / 压制组标签" @keyup.enter="addManagedTag('group')" />
-              <el-button @click="addManagedTag('group')">添加</el-button>
+              <el-button class="tag-manager-add" @click="addManagedTag('group')">添加</el-button>
             </div>
 
             <div v-if="groupTagLibrary.length" class="tag-chip-list">
@@ -110,11 +110,16 @@
       <section class="settings-card">
         <div class="settings-card-copy">
           <p class="settings-label">Maintenance</p>
-          <h2>封面缓存维护</h2>
-          <p>这里只清理本地封面缓存，不会删除番剧条目、收藏记录或映射数据。后续访问时会按需重新下载封面。</p>
+          <h2>缓存与数据维护</h2>
+          <p>这里可以清理本地封面缓存，或重置收藏管理里的本地收藏记录。重置收藏只会删除整理状态、标签和备注，不会移除番剧库条目和封面文件。</p>
         </div>
 
         <div class="maintenance-metrics">
+          <div class="metric-card">
+            <span>收藏记录数</span>
+            <strong>{{ settingsSnapshot?.collection_count ?? 0 }}</strong>
+          </div>
+
           <div class="metric-card">
             <span>缓存文件数</span>
             <strong>{{ settingsSnapshot?.cover_cache_file_count ?? 0 }}</strong>
@@ -136,8 +141,14 @@
           <strong>{{ updatedAtLabel }}</strong>
         </div>
 
+        <div class="settings-readonly settings-readonly--danger">
+          <span>数据重置范围</span>
+          <strong>仅清理收藏记录，不删除番剧库</strong>
+        </div>
+
         <div class="maintenance-actions">
           <el-button :loading="clearingCache" @click="clearCache">清理封面缓存</el-button>
+          <el-button class="maintenance-reset" :loading="resettingCollectionData" @click="resetCollectionData">重置收藏数据</el-button>
         </div>
       </section>
 
@@ -178,8 +189,14 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthSession } from '../auth'
-import { clearCoverCache, getSettings, updateSettings } from '../api'
-import { loadTagLibrary, resetTagLibrary, saveTagLibrary, type TagLibraryKind } from '../tagLibrary'
+import { clearCoverCache, getSettings, resetCollectionData as resetCollectionDataRequest, updateSettings } from '../services/settingsService'
+import {
+  loadManagedTagEntries,
+  loadManagedTags,
+  resetManagedTags as resetStoredManagedTags,
+  saveManagedTags,
+  type TagLibraryKind,
+} from '../services/tagService'
 import type { AppSettings } from '../types'
 
 const router = useRouter()
@@ -187,10 +204,13 @@ const session = useAuthSession()
 const loading = ref(false)
 const saving = ref(false)
 const clearingCache = ref(false)
+const resettingCollectionData = ref(false)
 const currentAdminUsername = ref('admin')
 const settingsSnapshot = ref<AppSettings | null>(null)
-const releaseTagLibrary = ref<string[]>(loadTagLibrary('release'))
-const groupTagLibrary = ref<string[]>(loadTagLibrary('group'))
+const releaseTagLibrary = ref<string[]>(loadManagedTags('release'))
+const groupTagLibrary = ref<string[]>(loadManagedTags('group'))
+const releaseTagEntries = ref(loadManagedTagEntries('release'))
+const groupTagEntries = ref(loadManagedTagEntries('group'))
 const releaseTagDraft = ref('')
 const groupTagDraft = ref('')
 const form = reactive({
@@ -244,8 +264,10 @@ async function load() {
     const settings = await getSettings()
     session.applySettings(settings)
     applySnapshot(settings)
-    releaseTagLibrary.value = loadTagLibrary('release')
-    groupTagLibrary.value = loadTagLibrary('group')
+    releaseTagLibrary.value = loadManagedTags('release')
+    groupTagLibrary.value = loadManagedTags('group')
+    releaseTagEntries.value = loadManagedTagEntries('release')
+    groupTagEntries.value = loadManagedTagEntries('group')
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '加载设置失败')
   } finally {
@@ -270,27 +292,38 @@ function addManagedTag(kind: TagLibraryKind) {
     return
   }
 
-  const next = saveTagLibrary(kind, [...libraryRef.value, value])
+  const next = saveManagedTags(kind, [...libraryRef.value, value])
   if (next.length === libraryRef.value.length) {
     ElMessage.info(`${tagLibraryLabels[kind]}已存在`)
     return
   }
 
   libraryRef.value = next
+  syncTagEntries(kind)
   draftRef.value = ''
   ElMessage.success(`已添加${tagLibraryLabels[kind]}`)
 }
 
 function removeManagedTag(kind: TagLibraryKind, tag: string) {
   const libraryRef = getTagLibraryRef(kind)
-  libraryRef.value = saveTagLibrary(kind, libraryRef.value.filter((item) => item !== tag))
+  libraryRef.value = saveManagedTags(kind, libraryRef.value.filter((item) => item !== tag))
+  syncTagEntries(kind)
   ElMessage.success(`已移除${tag}`)
 }
 
 function resetManagedTags(kind: TagLibraryKind) {
   const libraryRef = getTagLibraryRef(kind)
-  libraryRef.value = resetTagLibrary(kind)
+  libraryRef.value = resetStoredManagedTags(kind)
+  syncTagEntries(kind)
   ElMessage.success(`已恢复默认${tagLibraryLabels[kind]}`)
+}
+
+function syncTagEntries(kind: TagLibraryKind) {
+  if (kind === 'release') {
+    releaseTagEntries.value = loadManagedTagEntries('release')
+    return
+  }
+  groupTagEntries.value = loadManagedTagEntries('group')
 }
 
 async function clearCache() {
@@ -313,6 +346,42 @@ async function clearCache() {
     ElMessage.error(error instanceof Error ? error.message : '清理缓存失败')
   } finally {
     clearingCache.value = false
+  }
+}
+
+async function resetCollectionData() {
+  try {
+    await ElMessageBox.confirm(
+      '这会清空收藏管理中的本地收藏记录，包括整理状态、资源标签、字幕组标签和备注，但不会删除番剧库条目、封面缓存或同步映射。是否继续？',
+      '确认重置收藏数据',
+      {
+        type: 'warning',
+        confirmButtonText: '继续',
+        cancelButtonText: '取消'
+      }
+    )
+    await ElMessageBox.confirm(
+      '该操作不可撤销。重置后，收藏页中的所有本地整理信息都会被清空。是否确认执行重置？',
+      '二次确认',
+      {
+        type: 'error',
+        confirmButtonText: '确认重置',
+        cancelButtonText: '取消'
+      }
+    )
+  } catch {
+    return
+  }
+
+  resettingCollectionData.value = true
+  try {
+    const result = await resetCollectionDataRequest()
+    await load()
+    ElMessage.success(`已清理 ${result.deleted_collections} 条收藏记录`)
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '重置收藏数据失败')
+  } finally {
+    resettingCollectionData.value = false
   }
 }
 
@@ -385,17 +454,17 @@ onMounted(() => {
   justify-content: space-between;
   padding: 28px 30px;
   background:
-    radial-gradient(circle at top right, rgba(72, 139, 203, 0.18), transparent 28%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(250, 252, 255, 0.88));
-  border: 1px solid rgba(205, 214, 228, 0.72);
+    radial-gradient(circle at top right, rgba(72, 139, 203, 0.24), transparent 30%),
+    linear-gradient(135deg, rgba(13, 24, 41, 0.98), rgba(8, 16, 28, 0.94));
+  border: 1px solid var(--surface-line);
   border-radius: 28px;
-  box-shadow: 0 20px 60px rgba(24, 33, 47, 0.08);
+  box-shadow: 0 24px 60px rgba(2, 7, 15, 0.32);
 }
 
 .settings-eyebrow,
 .settings-label {
   margin: 0;
-  color: #4d7db3;
+  color: var(--accent);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -413,7 +482,7 @@ onMounted(() => {
 .settings-readonly span,
 .strategy-option p,
 .switch-row span {
-  color: #5e6b7d;
+  color: var(--text-muted);
 }
 
 .settings-refresh {
@@ -430,10 +499,10 @@ onMounted(() => {
   display: grid;
   gap: 18px;
   padding: 24px;
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(214, 222, 234, 0.86);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-line);
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(24, 33, 47, 0.06);
+  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.32);
 }
 
 .settings-card--wide {
@@ -459,8 +528,8 @@ onMounted(() => {
   display: grid;
   gap: 14px;
   padding: 18px;
-  background: linear-gradient(180deg, rgba(248, 250, 253, 0.96), rgba(244, 248, 252, 0.96));
-  border: 1px solid rgba(218, 226, 237, 0.88);
+  background: var(--surface-card-soft);
+  border: 1px solid rgba(144, 173, 214, 0.12);
   border-radius: 20px;
 }
 
@@ -483,20 +552,25 @@ onMounted(() => {
 }
 
 .tag-manager-copy h3 {
-  color: #233243;
+  color: var(--text-strong);
   font-size: 18px;
 }
 
 .tag-manager-copy p,
 .tag-chip-empty {
-  color: #5e6b7d;
+  color: var(--text-muted);
   line-height: 1.65;
 }
 
 .tag-manager-reset {
   min-height: 40px;
   padding-inline: 0;
-  color: #4d7db3;
+  color: rgba(173, 204, 238, 0.72);
+}
+
+.tag-manager-reset:hover,
+.tag-manager-reset:focus-visible {
+  color: var(--text-soft);
 }
 
 .tag-manager-entry {
@@ -506,16 +580,62 @@ onMounted(() => {
   align-items: center;
 }
 
+.tag-manager-add {
+  min-width: 96px;
+  min-height: 46px;
+  color: var(--text-soft);
+  background: rgba(15, 26, 42, 0.68);
+  border-color: rgba(144, 173, 214, 0.16);
+}
+
+.tag-manager-add:hover,
+.tag-manager-add:focus-visible {
+  color: var(--text-strong);
+  background: rgba(18, 31, 50, 0.82);
+  border-color: rgba(144, 173, 214, 0.24);
+}
+
 .tag-chip-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
+.tag-chip-list :deep(.el-tag) {
+  min-height: 40px;
+  padding-inline: 14px;
+  color: var(--text-soft);
+  background: rgba(16, 28, 45, 0.86);
+  border-color: rgba(144, 173, 214, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.tag-chip-list :deep(.el-tag.el-tag--primary) {
+  color: rgba(151, 213, 255, 0.9);
+  background: rgba(18, 39, 61, 0.92);
+  border-color: rgba(111, 183, 255, 0.22);
+}
+
+.tag-chip-list :deep(.el-tag.el-tag--info) {
+  color: rgba(224, 233, 247, 0.8);
+  background: rgba(21, 32, 48, 0.92);
+  border-color: rgba(144, 173, 214, 0.18);
+}
+
+.tag-chip-list :deep(.el-tag__close) {
+  color: currentColor;
+  background: transparent;
+}
+
+.tag-chip-list :deep(.el-tag__close:hover) {
+  color: var(--text-strong);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .tag-chip-empty {
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px dashed rgba(194, 205, 219, 0.92);
+  background: rgba(11, 20, 35, 0.78);
+  border: 1px dashed rgba(144, 173, 214, 0.22);
   border-radius: 16px;
   font-size: 13px;
 }
@@ -539,14 +659,14 @@ onMounted(() => {
   display: grid;
   gap: 8px;
   padding: 16px;
-  background: linear-gradient(180deg, rgba(248, 250, 253, 0.96), rgba(244, 248, 252, 0.96));
-  border: 1px solid rgba(218, 226, 237, 0.88);
+  background: var(--surface-card-soft);
+  border: 1px solid rgba(144, 173, 214, 0.12);
   border-radius: 18px;
 }
 
 .strategy-option--active {
-  border-color: rgba(89, 149, 231, 0.42);
-  box-shadow: 0 0 0 1px rgba(89, 149, 231, 0.22) inset;
+  border-color: rgba(111, 183, 255, 0.3);
+  box-shadow: 0 0 0 1px rgba(111, 183, 255, 0.18) inset;
 }
 
 .strategy-option p {
@@ -560,14 +680,14 @@ onMounted(() => {
   align-items: center;
   min-height: 46px;
   padding: 0 14px;
-  background: linear-gradient(180deg, rgba(248, 250, 253, 0.96), rgba(244, 248, 252, 0.96));
-  border: 1px solid rgba(218, 226, 237, 0.88);
+  background: var(--surface-card-soft);
+  border: 1px solid rgba(144, 173, 214, 0.12);
   border-radius: 18px;
 }
 
 .maintenance-metrics {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -576,19 +696,39 @@ onMounted(() => {
   display: grid;
   gap: 4px;
   padding: 14px 16px;
-  background: linear-gradient(180deg, rgba(248, 250, 253, 0.96), rgba(244, 248, 252, 0.96));
-  border: 1px solid rgba(218, 226, 237, 0.88);
+  background: var(--surface-card-soft);
+  border: 1px solid rgba(144, 173, 214, 0.12);
   border-radius: 18px;
 }
 
 .metric-card strong,
 .settings-readonly strong {
-  color: #233243;
+  color: var(--text-strong);
+}
+
+.settings-readonly--danger {
+  border-color: rgba(255, 125, 125, 0.2);
+  background: linear-gradient(180deg, rgba(64, 20, 24, 0.4), rgba(26, 13, 18, 0.66));
 }
 
 .maintenance-actions {
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   justify-content: flex-start;
+}
+
+.maintenance-reset {
+  color: #ffd7d7;
+  background: linear-gradient(180deg, rgba(88, 24, 31, 0.76), rgba(60, 18, 24, 0.84));
+  border-color: rgba(255, 127, 127, 0.28);
+}
+
+.maintenance-reset:hover,
+.maintenance-reset:focus-visible {
+  color: #fff1f1;
+  border-color: rgba(255, 148, 148, 0.4);
+  background: linear-gradient(180deg, rgba(112, 31, 39, 0.82), rgba(72, 22, 29, 0.88));
 }
 
 .settings-actions {
@@ -600,10 +740,10 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(214, 222, 234, 0.88);
+  background: rgba(8, 15, 27, 0.9);
+  border: 1px solid var(--surface-line);
   border-radius: 22px;
-  box-shadow: 0 20px 40px rgba(24, 33, 47, 0.1);
+  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.34);
   backdrop-filter: blur(14px);
 }
 
@@ -616,19 +756,19 @@ onMounted(() => {
 }
 
 .settings-cancel {
-  border-color: rgba(202, 212, 226, 0.94);
+  border-color: var(--surface-line-strong);
 }
 
 .settings-submit {
   border: none;
-  background: linear-gradient(135deg, #2f6fb5, #4d95d6);
-  box-shadow: 0 18px 34px rgba(54, 111, 182, 0.28);
+  background: linear-gradient(135deg, #4996db, #63b6ff);
+  box-shadow: 0 18px 34px rgba(40, 101, 161, 0.34);
 }
 
 .settings-submit:hover,
 .settings-submit:focus-visible {
   transform: translateY(-1px);
-  box-shadow: 0 22px 40px rgba(54, 111, 182, 0.32);
+  box-shadow: 0 22px 40px rgba(40, 101, 161, 0.4);
 }
 
 .settings-form :deep(.el-input__wrapper),
@@ -636,7 +776,8 @@ onMounted(() => {
 .settings-form :deep(.el-textarea__inner),
 .settings-form :deep(.el-input-number) {
   border-radius: 16px;
-  box-shadow: 0 0 0 1px rgba(214, 222, 234, 0.92) inset;
+  background: var(--surface-input);
+  box-shadow: 0 0 0 1px var(--surface-line) inset;
 }
 
 .settings-form :deep(.el-input__wrapper),
@@ -647,12 +788,18 @@ onMounted(() => {
 .tag-manager-panel :deep(.el-input__wrapper) {
   min-height: 48px;
   border-radius: 16px;
-  box-shadow: 0 0 0 1px rgba(214, 222, 234, 0.92) inset;
+  background: var(--surface-input);
+  box-shadow: 0 0 0 1px var(--surface-line) inset;
 }
 
 .tag-manager-panel :deep(.el-button),
 .tag-manager-panel :deep(.el-tag) {
   border-radius: 14px;
+}
+
+.sync-strategy-group :deep(.el-radio__label) {
+  color: var(--text-strong);
+  font-weight: 600;
 }
 
 @media (max-width: 1080px) {

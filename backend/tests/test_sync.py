@@ -31,7 +31,7 @@ def test_upsert_records_deduplicates_and_preserves_collection() -> None:
 
     anime = db.scalar(select(AnimeMaster).where(AnimeMaster.source_id == "alpha"))
     assert anime is not None
-    collection = CollectionItem(anime_id=anime.id, note="手工备注", release_tags="BDRip", group_tags="ANi")
+    collection = CollectionItem(anime_id=anime.id, note="手工备注", release_tags=["BDRip"], group_tags=["ANi"])
     db.add(collection)
     db.commit()
 
@@ -43,8 +43,8 @@ def test_upsert_records_deduplicates_and_preserves_collection() -> None:
     collection = db.scalar(select(CollectionItem).where(CollectionItem.anime_id == anime.id))
     assert anime.platforms == "Netflix"
     assert collection.note == "手工备注"
-    assert collection.release_tags == "BDRip"
-    assert collection.group_tags == "ANi"
+    assert collection.release_tags == ["BDRip"]
+    assert collection.group_tags == ["ANi"]
 
 
 def test_upsert_records_handles_duplicate_source_ids_in_same_batch() -> None:

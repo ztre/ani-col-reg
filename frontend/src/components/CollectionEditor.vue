@@ -8,8 +8,8 @@
 
     <el-form-item label="资源标签">
       <el-select
-        class="collection-multi-select"
         v-model="releaseTagList"
+        class="collection-multi-select"
         multiple
         clearable
         filterable
@@ -27,8 +27,8 @@
 
     <el-form-item label="字幕组 / 压制组">
       <el-select
-        class="collection-multi-select"
         v-model="groupTagList"
+        class="collection-multi-select"
         multiple
         clearable
         filterable
@@ -69,15 +69,15 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessageBox } from 'element-plus'
 
-import { deleteCollection, saveCollection, updateCollection } from '../api'
+import { splitTagValues } from '../animePresentation'
 import { ORGANIZE_STATUS_OPTIONS, type CollectionOrganizeStatus } from '../collectionPresentation'
+import { deleteCollection, saveCollection, updateCollection } from '../services/collectionService'
+import { loadManagedTags, rememberManagedTags } from '../services/tagService'
 import {
   RELEASE_TAG_GROUP_LABELS,
-  loadTagLibrary,
   mergeTagOptions,
   normalizeReleaseTags,
   releaseTagGroup,
-  rememberTagLibrary,
 } from '../tagLibrary'
 import type { CollectionItem } from '../types'
 
@@ -97,8 +97,8 @@ const removing = ref(false)
 const organizeStatus = ref<CollectionOrganizeStatus>('pending')
 const releaseTagList = ref<string[]>([])
 const groupTagList = ref<string[]>([])
-const savedReleaseOptions = ref<string[]>(loadTagLibrary('release'))
-const savedGroupOptions = ref<string[]>(loadTagLibrary('group'))
+const savedReleaseOptions = ref<string[]>(loadManagedTags('release'))
+const savedGroupOptions = ref<string[]>(loadManagedTags('group'))
 const draft = reactive({
   note: ''
 })
@@ -137,24 +137,13 @@ watch(
   (collection) => {
     organizeStatus.value = collection?.organize_status || 'pending'
     draft.note = collection?.note || ''
-    releaseTagList.value = normalizeReleaseTags(splitTags(collection?.release_tags))
-    groupTagList.value = splitTags(collection?.group_tags)
-    savedReleaseOptions.value = loadTagLibrary('release')
-    savedGroupOptions.value = loadTagLibrary('group')
+    releaseTagList.value = normalizeReleaseTags(splitTagValues(collection?.release_tags))
+    groupTagList.value = splitTagValues(collection?.group_tags)
+    savedReleaseOptions.value = loadManagedTags('release')
+    savedGroupOptions.value = loadManagedTags('group')
   },
   { immediate: true }
 )
-
-function splitTags(value?: string | null) {
-  return (value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
-function joinTags(tags: string[]) {
-  return tags.map((item) => item.trim()).filter(Boolean).join(', ')
-}
 
 function handleReleaseTagChange(tags: string[]) {
   releaseTagList.value = normalizeReleaseTags(tags)
@@ -170,14 +159,14 @@ async function submit() {
       anime_id: props.animeId,
       organize_status: organizeStatus.value,
       note: draft.note || null,
-      release_tags: joinTags(normalizedReleaseTags) || null,
-      group_tags: joinTags(groupTagList.value) || null
+      release_tags: normalizedReleaseTags,
+      group_tags: groupTagList.value
     }
     const saved = props.collection?.id
       ? await updateCollection(props.collection.id, payload)
       : await saveCollection(payload)
-    savedReleaseOptions.value = rememberTagLibrary('release', savedReleaseOptions.value, normalizedReleaseTags)
-    savedGroupOptions.value = rememberTagLibrary('group', savedGroupOptions.value, groupTagList.value)
+    savedReleaseOptions.value = rememberManagedTags('release', savedReleaseOptions.value, normalizedReleaseTags)
+    savedGroupOptions.value = rememberManagedTags('group', savedGroupOptions.value, groupTagList.value)
     emit('saved', saved)
   } catch (error) {
     emit('error', error instanceof Error ? error.message : '保存失败')
@@ -221,7 +210,7 @@ async function remove() {
 }
 
 .collection-form :deep(.el-form-item__label) {
-  color: #334155;
+  color: rgba(224, 233, 247, 0.84);
   font-weight: 700;
 }
 
@@ -239,7 +228,8 @@ async function remove() {
 .collection-form :deep(.el-select__wrapper),
 .collection-form :deep(.el-textarea__inner) {
   border-radius: 16px;
-  box-shadow: 0 0 0 1px rgba(214, 222, 234, 0.92) inset;
+  background: var(--surface-input);
+  box-shadow: 0 0 0 1px var(--surface-line) inset;
 }
 
 .collection-form :deep(.el-select__wrapper) {
@@ -282,15 +272,16 @@ async function remove() {
 
 .collection-form :deep(.el-textarea__inner) {
   min-height: 116px;
+  color: var(--text-strong);
 }
 
 .collection-form :deep(.el-button) {
   width: 100%;
   border-radius: 16px;
-  box-shadow: 0 12px 28px rgba(57, 122, 218, 0.2);
+  box-shadow: 0 14px 30px rgba(3, 8, 15, 0.24);
 }
 
-.collection-remove:deep(.el-button) {
+.collection-form :deep(.collection-remove) {
   box-shadow: none;
 }
 

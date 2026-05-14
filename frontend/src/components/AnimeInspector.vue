@@ -170,8 +170,9 @@ function posterFallback(title: string) {
   overflow: hidden;
   border-radius: 24px;
   aspect-ratio: 3 / 4;
-  background: linear-gradient(135deg, #d7e2f1, #ecf1f8);
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+  background: linear-gradient(135deg, rgba(32, 53, 82, 0.94), rgba(8, 18, 31, 0.98));
+  border: 1px solid var(--surface-line);
+  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.42);
 }
 
 .inspector-poster img,
@@ -190,7 +191,7 @@ function posterFallback(title: string) {
   display: grid;
   place-items: center;
   color: #ffffff;
-  background: linear-gradient(135deg, #5885c2, #253955);
+  background: linear-gradient(135deg, #5dacf4, #183252);
   font-size: 38px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -201,10 +202,10 @@ function posterFallback(title: string) {
   display: grid;
   gap: 14px;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(214, 222, 234, 0.86);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-line);
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(24, 33, 47, 0.06);
+  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.34);
 }
 
 .inspector-heading {
@@ -216,7 +217,7 @@ function posterFallback(title: string) {
 .inspector-eyebrow,
 .panel-eyebrow {
   margin: 0;
-  color: #4d7db3;
+  color: var(--accent);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -226,7 +227,7 @@ function posterFallback(title: string) {
 .inspector-heading h2,
 .panel-copy h3 {
   margin: 0;
-  color: #18212f;
+  color: var(--text-strong);
 }
 
 .inspector-heading h2 {
@@ -238,7 +239,7 @@ function posterFallback(title: string) {
 .inspector-summary,
 .panel-copy p {
   margin: 0;
-  color: #5e6b7d;
+  color: var(--text-muted);
   line-height: 1.65;
 }
 
@@ -262,30 +263,30 @@ function posterFallback(title: string) {
   align-items: center;
   min-height: 28px;
   padding: 0 10px;
-  color: #3c4f63;
-  background: rgba(243, 247, 252, 0.94);
-  border: 1px solid rgba(213, 222, 234, 0.9);
+  color: var(--text-soft);
+  background: var(--surface-chip);
+  border: 1px solid var(--surface-line);
   border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
 }
 
 .chip--library {
-  color: #3c4f63;
-  background: rgba(243, 247, 252, 0.94);
-  border-color: rgba(213, 222, 234, 0.9);
+  color: #dff3ff;
+  background: rgba(46, 95, 149, 0.36);
+  border-color: rgba(124, 188, 255, 0.26);
 }
 
 .chip--pending {
-  color: #9a3412;
-  background: rgba(255, 237, 213, 0.9);
-  border-color: rgba(251, 191, 36, 0.28);
+  color: #ffd7ae;
+  background: rgba(138, 97, 16, 0.28);
+  border-color: rgba(255, 205, 120, 0.24);
 }
 
 .chip--emby {
-  color: #166534;
-  background: rgba(220, 252, 231, 0.88);
-  border-color: rgba(74, 222, 128, 0.3);
+  color: #b9f3d1;
+  background: rgba(21, 92, 63, 0.34);
+  border-color: rgba(87, 215, 156, 0.22);
 }
 
 .inspector-meta-grid {
@@ -299,8 +300,8 @@ function posterFallback(title: string) {
   display: grid;
   gap: 6px;
   padding: 12px 13px;
-  background: linear-gradient(180deg, rgba(248, 250, 253, 0.96), rgba(244, 248, 252, 0.96));
-  border: 1px solid rgba(218, 226, 237, 0.88);
+  background: var(--surface-card-soft);
+  border: 1px solid rgba(144, 173, 214, 0.12);
   border-radius: 16px;
 }
 
@@ -313,14 +314,14 @@ function posterFallback(title: string) {
 }
 
 .meta-card strong {
-  color: #334155;
+  color: rgba(218, 230, 247, 0.72);
   font-size: 12px;
   line-height: 1.25;
 }
 
 .meta-card span,
 .meta-card a {
-  color: #5e6b7d;
+  color: var(--text-soft);
   font-size: 13px;
   line-height: 1.45;
   word-break: break-word;
@@ -330,10 +331,10 @@ function posterFallback(title: string) {
   display: grid;
   gap: 18px;
   padding: 24px;
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(214, 222, 234, 0.86);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-line);
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(24, 33, 47, 0.06);
+  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.34);
 }
 
 .inspector-panel--side {
@@ -343,6 +344,12 @@ function posterFallback(title: string) {
 .panel-copy {
   display: grid;
   gap: 8px;
+}
+
+.meta-tags :deep(.el-tag) {
+  background: rgba(18, 31, 50, 0.72);
+  border-color: rgba(144, 173, 214, 0.18);
+  color: var(--text-soft);
 }
 
 @media (max-width: 1180px) {

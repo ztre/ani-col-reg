@@ -1,7 +1,7 @@
 import { reactive } from 'vue'
 
-import { authStatus, login as loginRequest } from './api'
 import { clearAuthToken, getAuthToken, setAuthToken } from './session'
+import { authStatus, login as loginRequest } from './services/authService'
 import type { AppSettings, AuthStatus, LoginResponse } from './types'
 
 const state = reactive({

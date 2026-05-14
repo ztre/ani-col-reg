@@ -10,8 +10,8 @@ class CollectionOut(BaseModel):
     anime_id: int
     organize_status: Literal["pending", "emby"]
     note: str | None
-    release_tags: str | None
-    group_tags: str | None
+    release_tags: list[str]
+    group_tags: list[str]
     updated_at: datetime | None = None
 
     model_config = {"from_attributes": True}
@@ -36,6 +36,7 @@ class AnimeOut(BaseModel):
     tags: str | None
     pv_url: str | None
     cover_url: str | None
+    detail_refreshing: bool = False
     collection_item: CollectionOut | None = None
 
     model_config = {"from_attributes": True}
@@ -99,6 +100,7 @@ class AppSettingsOut(BaseModel):
     admin_username: str
     youranimes_base_url: str
     mikan_base_url: str
+    collection_count: int = 0
     cover_cache_file_count: int = 0
     cover_cache_total_bytes: int = 0
     updated_at: datetime
@@ -111,6 +113,11 @@ class MaintenanceActionOut(BaseModel):
     reset_cover_urls: int = 0
     remaining_files: int
     remaining_bytes: int
+
+
+class CollectionResetActionOut(BaseModel):
+    deleted_collections: int
+    remaining_collections: int
 
 
 class AppSettingsUpdate(BaseModel):
@@ -151,15 +158,25 @@ class CollectionCreate(BaseModel):
     anime_id: int
     organize_status: Literal["pending", "emby"] = "pending"
     note: str | None = None
-    release_tags: str | None = None
-    group_tags: str | None = None
+    release_tags: list[str] | None = None
+    group_tags: list[str] | None = None
+
+    @field_validator("release_tags", "group_tags", mode="before")
+    @classmethod
+    def normalize_tag_values(cls, value: str | list[str] | None) -> list[str] | None:
+        return _normalize_tag_list(value)
 
 
 class CollectionUpdate(BaseModel):
     organize_status: Literal["pending", "emby"] | None = None
     note: str | None = None
-    release_tags: str | None = None
-    group_tags: str | None = None
+    release_tags: list[str] | None = None
+    group_tags: list[str] | None = None
+
+    @field_validator("release_tags", "group_tags", mode="before")
+    @classmethod
+    def normalize_tag_values(cls, value: str | list[str] | None) -> list[str] | None:
+        return _normalize_tag_list(value)
 
 
 class AnimeSearchRequest(BaseModel):
@@ -194,3 +211,26 @@ class MappingOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TagUsageOut(BaseModel):
+    value: str
+    count: int
+
+
+class TagSummaryOut(BaseModel):
+    release: list[TagUsageOut]
+    group: list[TagUsageOut]
+
+
+def _normalize_tag_list(value: str | list[str] | None) -> list[str] | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        values = value.split(',')
+    else:
+        values = value
+
+    normalized = [item.strip() for item in values if isinstance(item, str) and item.strip()]
+    unique_values = list(dict.fromkeys(normalized))
+    return unique_values or []

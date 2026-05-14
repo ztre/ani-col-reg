@@ -71,9 +71,9 @@ async function submit() {
   place-items: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top left, rgba(87, 144, 225, 0.24), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(255, 191, 142, 0.22), transparent 28%),
-    linear-gradient(135deg, #f5f8fd, #eef4fb 52%, #f7f2ec 100%);
+    radial-gradient(circle at top left, rgba(87, 144, 225, 0.24), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(77, 149, 214, 0.18), transparent 26%),
+    linear-gradient(135deg, #07101c, #091423 52%, #050b15 100%);
 }
 
 .login-card {
@@ -82,10 +82,10 @@ async function submit() {
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 420px);
   gap: 28px;
   padding: 32px;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(214, 222, 234, 0.84);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-line);
   border-radius: 32px;
-  box-shadow: 0 30px 60px rgba(24, 33, 47, 0.12);
+  box-shadow: 0 30px 68px rgba(2, 7, 15, 0.38);
   backdrop-filter: blur(18px);
 }
 
@@ -98,7 +98,7 @@ async function submit() {
 
 .login-eyebrow {
   margin: 0;
-  color: #4d7db3;
+  color: var(--accent);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -107,27 +107,27 @@ async function submit() {
 
 .login-copy h1 {
   margin: 0;
-  color: #18212f;
+  color: var(--text-strong);
   font-size: clamp(34px, 5vw, 52px);
   line-height: 1.04;
 }
 
 .login-copy p:last-child {
   margin: 0;
-  color: #5d6a7b;
+  color: var(--text-muted);
   line-height: 1.75;
 }
 
 .login-form {
   padding: 24px;
-  background: rgba(248, 251, 255, 0.94);
-  border: 1px solid rgba(219, 226, 237, 0.84);
+  background: var(--surface-card-soft);
+  border: 1px solid rgba(144, 173, 214, 0.12);
   border-radius: 24px;
 }
 
 .login-hint {
   margin-bottom: 16px;
-  color: #5d6a7b;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -135,19 +135,19 @@ async function submit() {
 .login-submit {
   width: 100%;
   border-radius: 16px;
-  box-shadow: 0 14px 30px rgba(57, 122, 218, 0.22);
+  box-shadow: 0 18px 34px rgba(40, 101, 161, 0.32);
 }
 
 .login-form :deep(.el-form-item__label) {
-  color: #314254;
+  color: rgba(224, 233, 247, 0.84);
   font-weight: 700;
 }
 
 .login-form :deep(.el-input__wrapper) {
   min-height: 48px;
   border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 0 0 1px rgba(214, 222, 234, 0.92) inset;
+  background: var(--surface-input);
+  box-shadow: 0 0 0 1px var(--surface-line) inset;
 }
 
 @media (max-width: 860px) {

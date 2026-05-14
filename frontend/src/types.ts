@@ -4,8 +4,8 @@ export interface CollectionItem {
   anime_id: number
   organize_status: 'pending' | 'emby'
   note: string | null
-  release_tags: string | null
-  group_tags: string | null
+  release_tags: string[]
+  group_tags: string[]
   updated_at?: string | null
 }
 
@@ -28,6 +28,7 @@ export interface Anime {
   tags: string | null
   pv_url: string | null
   cover_url: string | null
+  detail_refreshing?: boolean
   collection_item: CollectionItem | null
 }
 
@@ -76,6 +77,7 @@ export interface AppSettings {
   admin_username: string
   youranimes_base_url: string
   mikan_base_url: string
+  collection_count: number
   cover_cache_file_count: number
   cover_cache_total_bytes: number
   updated_at: string
@@ -104,4 +106,9 @@ export interface MaintenanceAction {
   reset_cover_urls: number
   remaining_files: number
   remaining_bytes: number
+}
+
+export interface CollectionResetAction {
+  deleted_collections: number
+  remaining_collections: number
 }

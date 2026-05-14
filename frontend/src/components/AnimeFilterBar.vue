@@ -1,6 +1,6 @@
 <template>
   <section :class="['anime-filter-bar', { 'anime-filter-bar--keyword': showKeywordInput }]">
-    <div class="year-filter">
+    <div class="anime-filter-bar__field year-filter">
       <el-date-picker
         v-model="yearModel"
         type="year"
@@ -13,7 +13,7 @@
       <el-button text class="year-filter-action" @click="selectCurrentYear">今年</el-button>
     </div>
 
-    <div class="season-filter" role="group" aria-label="季度筛选">
+    <div class="anime-filter-bar__field season-filter" role="group" aria-label="季度筛选">
       <button
         v-for="option in seasonFilterOptions"
         :key="option.value ?? 'all'"
@@ -30,7 +30,7 @@
       v-model="keywordModel"
       clearable
       size="large"
-      class="keyword-filter"
+      class="anime-filter-bar__field anime-filter-bar__field--keyword keyword-filter"
       :placeholder="keywordPlaceholder"
       @keyup.enter="emit('apply')"
     >
@@ -40,6 +40,7 @@
     <template v-else>
       <el-select
         v-model="releaseTagsModel"
+        class="anime-filter-bar__field anime-filter-bar__field--release"
         multiple
         clearable
         collapse-tags
@@ -55,6 +56,7 @@
 
       <el-select
         v-model="groupTagsModel"
+        class="anime-filter-bar__field anime-filter-bar__field--group"
         multiple
         clearable
         collapse-tags
@@ -69,8 +71,10 @@
       </el-select>
     </template>
 
-    <el-button text class="filter-reset" @click="emit('clear')">{{ clearLabel }}</el-button>
-    <el-button type="primary" size="large" :icon="Search" @click="emit('apply')">{{ applyLabel }}</el-button>
+    <div class="anime-filter-bar__actions">
+      <el-button text class="filter-reset" @click="emit('clear')">{{ clearLabel }}</el-button>
+      <el-button type="primary" size="large" :icon="Search" @click="emit('apply')">{{ applyLabel }}</el-button>
+    </div>
   </section>
 </template>
 
@@ -172,17 +176,59 @@ function selectSeason(value?: number) {
 <style scoped>
 .anime-filter-bar {
   display: grid;
-  grid-template-columns: minmax(180px, 220px) minmax(280px, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) auto auto;
   gap: 12px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(214, 222, 234, 0.84);
-  border-radius: 24px;
-  box-shadow: 0 16px 40px rgba(24, 33, 47, 0.05);
+  align-items: start;
 }
 
-.anime-filter-bar--keyword .keyword-filter {
-  grid-column: span 2;
+.anime-filter-bar:not(.anime-filter-bar--keyword) {
+  grid-template-columns: minmax(172px, 208px) minmax(260px, 1fr) auto;
+  grid-template-areas:
+    'year season actions'
+    'release group actions';
+}
+
+.year-filter {
+  grid-area: year;
+}
+
+.season-filter {
+  grid-area: season;
+}
+
+.anime-filter-bar__field--release {
+  grid-area: release;
+}
+
+.anime-filter-bar__field--group {
+  grid-area: group;
+}
+
+.anime-filter-bar--keyword {
+  grid-template-columns: minmax(172px, 208px) minmax(280px, 1fr) auto;
+  grid-template-areas:
+    'year season actions'
+    'keyword keyword keyword';
+}
+
+.anime-filter-bar__field--keyword {
+  grid-area: keyword;
+}
+
+.anime-filter-bar__field {
+  min-width: 0;
+}
+
+.anime-filter-bar__actions {
+  grid-area: actions;
+  display: grid;
+  grid-auto-flow: column;
+  gap: 10px;
+  align-self: stretch;
+  justify-self: end;
+}
+
+.anime-filter-bar--keyword .anime-filter-bar__actions {
+  align-self: center;
 }
 
 .year-filter {
@@ -197,16 +243,20 @@ function selectSeason(value?: number) {
 }
 
 .year-filter-action {
-  min-height: 42px;
-  padding-inline: 10px;
-  color: #4d7db3;
-  border-radius: 14px;
+  min-height: 48px;
+  padding-inline: 12px;
+  color: var(--text-soft);
+  background: rgba(17, 28, 45, 0.72);
+  border: 1px solid var(--surface-line);
+  border-radius: 16px;
 }
 
 .filter-reset {
-  min-height: 42px;
-  color: #5d6a7b;
-  border-radius: 14px;
+  min-height: 48px;
+  color: var(--text-muted);
+  background: rgba(12, 21, 36, 0.68);
+  border: 1px solid rgba(169, 193, 226, 0.12);
+  border-radius: 16px;
 }
 
 .season-filter {
@@ -214,19 +264,19 @@ function selectSeason(value?: number) {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  min-height: 48px;
   padding: 6px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(210, 219, 232, 0.88);
+  background: var(--surface-panel-strong);
+  border: 1px solid var(--surface-line);
   border-radius: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
 .season-filter-chip {
   min-height: 38px;
   padding: 0 14px;
-  color: #5d6a7b;
+  color: var(--text-muted);
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 14px;
   font-size: 13px;
   font-weight: 700;
@@ -235,14 +285,15 @@ function selectSeason(value?: number) {
 }
 
 .season-filter-chip:hover {
-  color: #314254;
-  background: rgba(238, 243, 249, 0.92);
+  color: var(--text-strong);
+  background: rgba(18, 31, 50, 0.92);
 }
 
 .season-filter-chip--active {
-  color: #ffffff;
-  background: linear-gradient(135deg, #2f6fb5, #4d95d6);
-  box-shadow: 0 10px 24px rgba(54, 111, 182, 0.22);
+  color: #04101d;
+  background: var(--accent-gradient);
+  border-color: rgba(173, 223, 255, 0.42);
+  box-shadow: var(--accent-shadow);
 }
 
 .anime-filter-bar :deep(.el-input__wrapper),
@@ -250,16 +301,60 @@ function selectSeason(value?: number) {
 .anime-filter-bar :deep(.el-date-editor .el-input__wrapper) {
   min-height: 48px;
   border-radius: 16px;
-  box-shadow: 0 0 0 1px rgba(214, 222, 234, 0.92) inset;
+  color: var(--text-soft);
+  background: var(--surface-panel-strong);
+  box-shadow: 0 0 0 1px var(--surface-line) inset;
 }
 
-.anime-filter-bar :deep(.el-button) {
+.anime-filter-bar :deep(.el-input__inner),
+.anime-filter-bar :deep(.el-select__placeholder),
+.anime-filter-bar :deep(.el-date-editor .el-range-input),
+.anime-filter-bar :deep(.el-date-editor .el-input__inner),
+.anime-filter-bar :deep(.el-icon) {
+  color: var(--text-soft);
+}
+
+.anime-filter-bar :deep(.el-tag.el-tag--info) {
+  background: rgba(24, 38, 59, 0.92);
+  border-color: rgba(169, 193, 226, 0.16);
+}
+
+.anime-filter-bar :deep(.el-button),
+.anime-filter-bar__actions :deep(.el-button) {
   border-radius: 16px;
+}
+
+.anime-filter-bar__actions :deep(.el-button--primary) {
+  min-height: 48px;
+  padding-inline: 18px;
+  color: #06101d;
+  background: var(--accent-gradient);
+  border-color: transparent;
+  box-shadow: var(--accent-shadow);
+}
+
+.anime-filter-bar__actions :deep(.el-button--primary:hover) {
+  background: var(--accent-gradient-hover);
 }
 
 @media (max-width: 960px) {
   .anime-filter-bar {
     grid-template-columns: 1fr;
+    grid-template-areas: none;
+  }
+
+  .year-filter,
+  .season-filter,
+  .anime-filter-bar__field--keyword,
+  .anime-filter-bar__field--release,
+  .anime-filter-bar__field--group,
+  .anime-filter-bar__actions {
+    grid-area: auto;
+  }
+
+  .anime-filter-bar__actions {
+    grid-auto-flow: row;
+    justify-self: stretch;
   }
 
   .season-filter {

@@ -13,7 +13,7 @@
 import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
 
-import { getAnime } from '../api'
+import { getAnime } from '../services/animeService'
 import AnimeInspector from '../components/AnimeInspector.vue'
 import type { Anime, CollectionItem } from '../types'
 
@@ -52,7 +52,18 @@ onMounted(load)
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 4px;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(8, 15, 27, 0.82);
+  border: 1px solid var(--surface-line);
+  border-radius: 22px;
+  box-shadow: 0 20px 40px rgba(2, 7, 15, 0.28);
+  backdrop-filter: blur(18px);
+}
+
+.detail-toolbar :deep(.el-button) {
+  min-height: 42px;
+  padding-inline: 16px;
 }
 
 @media (max-width: 640px) {

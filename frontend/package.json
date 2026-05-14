@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "node node_modules/vite/bin/vite.js --host 0.0.0.0",
-    "build": "node node_modules/vue-tsc/bin/vue-tsc.js -b && node node_modules/vite/bin/vite.js build",
+    "build": "node node_modules/vite/bin/vite.js build",
+    "lint": "node node_modules/eslint/bin/eslint.js src vite.config.ts --max-warnings 0",
+    "typecheck": "node node_modules/vue-tsc/bin/vue-tsc.js --noEmit -p tsconfig.json",
+    "format": "node node_modules/prettier/bin/prettier.cjs --write \"src/**/*.{ts,vue,css}\" \"*.{html,json,js,ts}\"",
     "preview": "node node_modules/vite/bin/vite.js preview --host 0.0.0.0"
   },
   "dependencies": {
@@ -15,10 +18,19 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.2.1",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.10.5",
+    "@typescript-eslint/eslint-plugin": "^8.59.3",
+    "@typescript-eslint/parser": "^8.59.3",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "eslint": "^10.3.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.9.1",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.3",
     "typescript": "~5.7.2",
     "vite": "^6.0.7",
+    "vue-eslint-parser": "^10.4.0",
     "vue-tsc": "^2.2.0"
   }
 }
