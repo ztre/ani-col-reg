@@ -17,7 +17,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
-import { getAnime } from '../api'
+import { getAnime } from '../services/animeService'
 import type { Anime, CollectionItem } from '../types'
 import AnimeInspector from './AnimeInspector.vue'
 
@@ -40,6 +40,7 @@ const anime = ref<Anime | null>(null)
 const loading = ref(false)
 const showRefreshBanner = ref(false)
 let refreshBannerTimer: ReturnType<typeof setTimeout> | null = null
+let refreshPollTimer: ReturnType<typeof setTimeout> | null = null
 let requestSerial = 0
 
 const visible = computed({
@@ -49,7 +50,7 @@ const visible = computed({
 
 const dialogTitle = computed(() => anime.value?.title_cn || '番剧详情')
 const blockingLoading = computed(() => loading.value && !anime.value)
-const refreshingBannerVisible = computed(() => showRefreshBanner.value && Boolean(anime.value))
+const refreshingBannerVisible = computed(() => Boolean(anime.value?.detail_refreshing) || (showRefreshBanner.value && Boolean(anime.value)))
 
 watch(
   [() => props.modelValue, () => props.animeId],
@@ -68,6 +69,7 @@ watch(
     if (!shouldFetchDetail(initialAnime, props.detailLoaded)) {
       loading.value = false
       clearRefreshBanner()
+      clearRefreshPoll()
       return
     }
 
@@ -136,7 +138,14 @@ function clearRefreshBanner() {
   showRefreshBanner.value = false
 }
 
-async function load(animeId: number) {
+function clearRefreshPoll() {
+  if (refreshPollTimer !== null) {
+    clearTimeout(refreshPollTimer)
+    refreshPollTimer = null
+  }
+}
+
+async function load(animeId: number, pollAttempt = 0) {
   const currentRequest = ++requestSerial
   scheduleRefreshBanner()
   loading.value = true
@@ -146,6 +155,10 @@ async function load(animeId: number) {
       return
     }
     anime.value = detail
+    if (detail.detail_refreshing) {
+      scheduleRefreshPoll(animeId, pollAttempt)
+      return
+    }
     emit('loaded', detail)
   } catch (error) {
     if (currentRequest === requestSerial) {
@@ -157,6 +170,20 @@ async function load(animeId: number) {
       clearRefreshBanner()
     }
   }
+}
+
+function scheduleRefreshPoll(animeId: number, pollAttempt: number) {
+  clearRefreshPoll()
+  if (pollAttempt >= 5) {
+    return
+  }
+
+  refreshPollTimer = setTimeout(() => {
+    if (!visible.value || props.animeId !== animeId) {
+      return
+    }
+    void load(animeId, pollAttempt + 1)
+  }, pollAttempt === 0 ? 700 : 1100)
 }
 
 function onSaved(collection: CollectionItem) {
@@ -184,29 +211,51 @@ function onRemoved(animeId: number) {
 .anime-dialog-refreshing {
   margin-bottom: 12px;
   padding: 10px 14px;
-  color: #305780;
-  background: rgba(214, 232, 255, 0.7);
-  border: 1px solid rgba(147, 186, 236, 0.72);
+  color: var(--text-soft);
+  background: var(--notice-info-bg);
+  border: 1px solid var(--notice-info-border);
   border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   font-size: 13px;
   font-weight: 700;
 }
 
-.anime-dialog:deep(.el-dialog) {
+:deep(.anime-dialog) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
   max-height: calc(100vh - 48px);
+  color: var(--text-strong);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-line);
   border-radius: 28px;
-  background: linear-gradient(180deg, #fcfdff, #f4f8fc);
+  box-shadow: var(--elevation-dialog);
+  backdrop-filter: blur(22px);
 }
 
-.anime-dialog:deep(.el-dialog__header) {
+:deep(.anime-dialog .el-dialog__header) {
   flex-shrink: 0;
   padding: 22px 24px 0;
+  border-bottom: 1px solid var(--panel-soft-border);
 }
 
-.anime-dialog:deep(.el-dialog__body) {
+:deep(.anime-dialog .el-dialog__title) {
+  color: var(--text-strong);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+:deep(.anime-dialog .el-dialog__headerbtn) {
+  top: 22px;
+  right: 20px;
+  color: var(--text-muted);
+}
+
+:deep(.anime-dialog .el-dialog__headerbtn:hover) {
+  color: var(--text-strong);
+}
+
+:deep(.anime-dialog .el-dialog__body) {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -214,7 +263,7 @@ function onRemoved(animeId: number) {
 }
 
 @media (max-width: 640px) {
-  .anime-dialog:deep(.el-dialog__body) {
+  :deep(.anime-dialog .el-dialog__body) {
     padding: 14px;
   }
 }

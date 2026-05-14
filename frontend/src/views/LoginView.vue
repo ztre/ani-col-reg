@@ -69,95 +69,230 @@ async function submit() {
   display: grid;
   min-height: 100vh;
   place-items: center;
-  padding: 24px;
+  position: relative;
+  isolation: isolate;
+  padding: 32px 24px;
+  background: transparent;
+}
+
+.login-page::before {
+  position: absolute;
+  inset: 0;
   background:
-    radial-gradient(circle at top left, rgba(87, 144, 225, 0.24), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(255, 191, 142, 0.22), transparent 28%),
-    linear-gradient(135deg, #f5f8fd, #eef4fb 52%, #f7f2ec 100%);
+    radial-gradient(circle at top left, rgba(255, 178, 213, 0.14), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(124, 183, 255, 0.12), transparent 26%);
+  content: '';
+  pointer-events: none;
 }
 
 .login-card {
-  width: min(960px, 100%);
+  position: relative;
+  width: min(1040px, 100%);
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 420px);
-  gap: 28px;
-  padding: 32px;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(214, 222, 234, 0.84);
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 396px);
+  gap: 22px;
+  padding: 28px;
+  overflow: hidden;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-line);
   border-radius: 32px;
-  box-shadow: 0 30px 60px rgba(24, 33, 47, 0.12);
+  box-shadow: var(--elevation-hero);
   backdrop-filter: blur(18px);
+}
+
+.login-card::before {
+  position: absolute;
+  inset: 18px auto 18px 18px;
+  width: min(34%, 260px);
+  background-image: var(--hero-auth-image);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: left 78%;
+  content: '';
+  pointer-events: none;
+  opacity: 0.88;
+  z-index: 0;
+}
+
+.login-card::after {
+  position: absolute;
+  inset: auto -8% -36% auto;
+  width: 280px;
+  height: 280px;
+  background: var(--hero-art-glow);
+  content: '';
+  pointer-events: none;
 }
 
 .login-copy {
   display: grid;
   align-content: center;
-  gap: 12px;
-  padding-right: 18px;
+  gap: 14px;
+  min-height: 340px;
+  max-width: 510px;
+  padding-right: 8px;
+}
+
+.login-copy,
+.login-form {
+  position: relative;
+  z-index: 1;
 }
 
 .login-eyebrow {
   margin: 0;
-  color: #4d7db3;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
 }
 
 .login-copy h1 {
   margin: 0;
-  color: #18212f;
-  font-size: clamp(34px, 5vw, 52px);
-  line-height: 1.04;
+  color: var(--text-strong);
+  max-width: 10ch;
+  font-size: clamp(2.7rem, 4.8vw, 4.5rem);
+  line-height: 0.94;
+  letter-spacing: -0.04em;
 }
 
 .login-copy p:last-child {
   margin: 0;
-  color: #5d6a7b;
-  line-height: 1.75;
+  max-width: 32rem;
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1.8;
 }
 
 .login-form {
-  padding: 24px;
-  background: rgba(248, 251, 255, 0.94);
-  border: 1px solid rgba(219, 226, 237, 0.84);
+  padding: 22px;
+  background: var(--surface-card-soft);
+  border: 1px solid var(--panel-soft-border);
   border-radius: 24px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
 }
 
 .login-hint {
   margin-bottom: 16px;
-  color: #5d6a7b;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.6;
 }
 
 .login-submit {
   width: 100%;
+  min-height: 54px;
   border-radius: 16px;
-  box-shadow: 0 14px 30px rgba(57, 122, 218, 0.22);
+  color: var(--action-primary-text);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: var(--action-primary-shadow);
 }
 
 .login-form :deep(.el-form-item__label) {
-  color: #314254;
+  color: var(--text-soft);
+  margin-bottom: 6px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .login-form :deep(.el-input__wrapper) {
-  min-height: 48px;
+  min-height: 52px;
   border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 0 0 1px rgba(214, 222, 234, 0.92) inset;
+  background: var(--surface-input);
+  box-shadow: 0 0 0 1px var(--surface-line) inset;
+}
+
+.login-form :deep(.el-input__inner) {
+  font-size: 16px;
 }
 
 @media (max-width: 860px) {
+  .login-page {
+    padding: 20px 14px;
+  }
+
   .login-card {
     grid-template-columns: 1fr;
-    padding: 22px;
+    gap: 18px;
+    padding: 20px;
+    border-radius: 26px;
+  }
+
+  .login-card::before {
+    display: none;
   }
 
   .login-copy {
+    min-height: 0;
     padding-right: 0;
+    gap: 10px;
+    max-width: none;
+  }
+
+  .login-copy h1 {
+    max-width: none;
+    font-size: clamp(2.2rem, 10vw, 3.4rem);
+  }
+
+  .login-copy p:last-child {
+    max-width: none;
+    font-size: 0.96rem;
+    line-height: 1.7;
+  }
+
+  .login-form {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-page {
+    align-items: start;
+    padding-top: 18px;
+  }
+
+  .login-card {
+    gap: 16px;
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .login-copy {
+    gap: 8px;
+  }
+
+  .login-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+  }
+
+  .login-copy h1 {
+    font-size: clamp(1.9rem, 11vw, 2.8rem);
+    line-height: 0.96;
+  }
+
+  .login-copy p:last-child {
+    font-size: 0.92rem;
+  }
+
+  .login-form {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .login-form :deep(.el-form-item) {
+    margin-bottom: 16px;
+  }
+
+  .login-form :deep(.el-input__wrapper) {
+    min-height: 50px;
+  }
+
+  .login-submit {
+    min-height: 50px;
+    border-radius: 14px;
   }
 }
 </style>

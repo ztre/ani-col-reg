@@ -98,10 +98,11 @@ import { Edit, Grid, List } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 
-import { listAnime } from '../api'
+import { splitTagValues } from '../animePresentation'
 import { collectionStageLabel, collectionStatusTagType, isWebReleaseTag } from '../collectionPresentation'
 import AnimeDialog from '../components/AnimeDialog.vue'
 import AnimeFilterBar from '../components/AnimeFilterBar.vue'
+import { listAnime } from '../services/animeService'
 import type { Anime, CollectionItem } from '../types'
 
 type CollectionLayoutMode = 'list' | 'cards'
@@ -151,11 +152,8 @@ function seasonLabel(season: number) {
   return labels[season] || String(season)
 }
 
-function splitTags(value?: string | null) {
-  return (value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
+function splitTags(value?: string[] | string | null) {
+  return splitTagValues(value)
 }
 
 function uniqueOptions(values: string[], selected: string[]) {
@@ -243,23 +241,53 @@ onMounted(load)
 }
 
 .collection-hero {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   align-items: flex-end;
   justify-content: space-between;
-  padding: 28px 30px;
-  background:
-    radial-gradient(circle at top right, rgba(72, 139, 203, 0.18), transparent 28%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(250, 252, 255, 0.88));
-  border: 1px solid rgba(205, 214, 228, 0.72);
+  padding: 28px clamp(220px, 32vw, 340px) 28px 30px;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--hero-surface);
+  border: 1px solid var(--surface-line);
   border-radius: 28px;
-  box-shadow: 0 20px 60px rgba(24, 33, 47, 0.08);
+  box-shadow: var(--elevation-hero);
+}
+
+.collection-hero::before {
+  position: absolute;
+  inset: 16px 12px 12px auto;
+  width: min(38%, 260px);
+  background-image: var(--hero-library-image);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: right center;
+  content: '';
+  pointer-events: none;
+  opacity: 0.94;
+  z-index: 0;
+}
+
+.collection-hero::after {
+  position: absolute;
+  inset: auto -6% -36% auto;
+  width: 280px;
+  height: 280px;
+  background: var(--hero-art-glow);
+  content: '';
+  pointer-events: none;
+}
+
+.collection-hero > * {
+  position: relative;
+  z-index: 1;
 }
 
 .collection-eyebrow {
   margin: 0 0 8px;
-  color: #4d7db3;
+  color: var(--accent);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -274,7 +302,7 @@ onMounted(load)
 .collection-subcopy,
 .entry-main p {
   margin: 8px 0 0;
-  color: #5e6b7d;
+  color: var(--text-muted);
   line-height: 1.7;
 }
 
@@ -287,10 +315,10 @@ onMounted(load)
   display: inline-flex;
   gap: 8px;
   padding: 6px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(210, 219, 232, 0.88);
+  background: var(--surface-panel-strong);
+  border: 1px solid var(--surface-line);
   border-radius: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .layout-switch-buttons :deep(.el-button) {
@@ -315,13 +343,13 @@ onMounted(load)
 }
 
 .collection-summary-title {
-  color: #233243;
+  color: var(--text-strong);
   font-size: 18px;
   font-weight: 700;
 }
 
 .collection-summary-subtitle {
-  color: #6f7d90;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -344,9 +372,9 @@ onMounted(load)
   align-items: center;
   min-height: 30px;
   padding: 0 12px;
-  color: #4b5a6d;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(215, 223, 235, 0.88);
+  color: var(--text-soft);
+  background: var(--surface-chip);
+  border: 1px solid var(--surface-line);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
@@ -367,10 +395,10 @@ onMounted(load)
 }
 
 .collection-entry {
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(214, 222, 234, 0.86);
+  background: var(--surface-card);
+  border: 1px solid var(--surface-line);
   border-radius: 24px;
-  box-shadow: 0 16px 40px rgba(24, 33, 47, 0.06);
+  box-shadow: var(--elevation-card);
 }
 
 .collection-entry--list {
@@ -394,7 +422,7 @@ onMounted(load)
   overflow: hidden;
   border-radius: 18px;
   aspect-ratio: 4 / 5;
-  background: linear-gradient(135deg, #d7e2f1, #ecf1f8);
+  background: var(--poster-card-bg);
 }
 
 .entry-poster img,
@@ -412,7 +440,7 @@ onMounted(load)
   display: grid;
   place-items: center;
   color: #ffffff;
-  background: linear-gradient(135deg, #5885c2, #253955);
+  background: var(--poster-fallback-gradient);
   font-size: 26px;
   font-weight: 800;
 }
@@ -428,7 +456,7 @@ onMounted(load)
 }
 
 .entry-main h2 {
-  color: #18212f;
+  color: var(--text-strong);
   font-size: 22px;
 }
 
@@ -446,7 +474,7 @@ onMounted(load)
 }
 
 .collection-entry--cards .entry-note {
-  color: #607084;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.55;
   display: -webkit-box;
@@ -456,7 +484,7 @@ onMounted(load)
 }
 
 .entry-meta {
-  color: #4d7db3;
+  color: var(--accent);
   font-size: 13px;
   font-weight: 700;
 }
@@ -493,6 +521,15 @@ onMounted(load)
 }
 
 @media (max-width: 960px) {
+  .collection-hero {
+    padding-right: 30px;
+  }
+
+  .collection-hero::before {
+    width: 180px;
+    opacity: 0.28;
+  }
+
   .collection-entry--list {
     grid-template-columns: 1fr;
   }

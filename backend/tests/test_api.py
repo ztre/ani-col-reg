@@ -54,8 +54,8 @@ def test_collection_flow() -> None:
         db,
     )
     assert updated.note == "手工备注"
-    assert updated.release_tags == "BDRip, 1080p"
-    assert updated.group_tags == "LoliHouse"
+    assert updated.release_tags == ["BDRip", "1080p"]
+    assert updated.group_tags == ["LoliHouse"]
     assert updated.organize_status == "emby"
 
     page = list_anime(season=None, collected=True, release_tag="BDRip", page=1, page_size=20, db=db)
@@ -93,14 +93,8 @@ def test_list_anime_supports_multiple_collection_tag_filters() -> None:
     db.refresh(anime_alpha)
     db.refresh(anime_beta)
 
-    create_collection(
-        CollectionCreate(anime_id=anime_alpha.id, release_tags="BDRip, 1080p", group_tags="ANi"),
-        db,
-    )
-    create_collection(
-        CollectionCreate(anime_id=anime_beta.id, release_tags="WEB-DL", group_tags="LoliHouse"),
-        db,
-    )
+    create_collection(CollectionCreate(anime_id=anime_alpha.id, release_tags="BDRip, 1080p", group_tags="ANi"), db)
+    create_collection(CollectionCreate(anime_id=anime_beta.id, release_tags="WEB-DL", group_tags="LoliHouse"), db)
 
     page = list_anime(
         season=None,
@@ -134,7 +128,7 @@ def test_list_anime_clears_missing_local_cover_urls(monkeypatch, tmp_path) -> No
     cache_dir = tmp_path / "covers"
     cache_dir.mkdir()
     monkeypatch.setattr(
-        "app.api.get_settings",
+        "app.routes.common.get_settings",
         lambda: SimpleNamespace(cover_cache_dir=cache_dir, cover_cache_public_path="/api/covers"),
     )
 
@@ -168,7 +162,7 @@ def test_list_anime_repairs_local_cover_extension(monkeypatch, tmp_path) -> None
     cache_dir.mkdir()
     (cache_dir / "webp-cover.jpg").write_bytes(b"RIFF\x10\x00\x00\x00WEBPVP8 " + b"0" * 16)
     monkeypatch.setattr(
-        "app.api.get_settings",
+        "app.routes.common.get_settings",
         lambda: SimpleNamespace(cover_cache_dir=cache_dir, cover_cache_public_path="/api/covers"),
     )
 
@@ -216,11 +210,20 @@ def test_search_anime_upserts_and_caches_source_cover(monkeypatch, tmp_path) -> 
                 if record.cover_url:
                     record.cover_url = f"{self.public_prefix}/cached-alpha.webp"
 
-    monkeypatch.setattr("app.api.YourAnimesScraper", FakeScraper)
-    monkeypatch.setattr("app.api.CoverCacheService", FakeCoverCache)
-    monkeypatch.setattr("app.api.get_app_settings_store", lambda: make_store())
+    monkeypatch.setattr("app.routes.sync.get_source_client", lambda source_name, settings: FakeScraper(settings.youranimes_base_url))
+    monkeypatch.setattr("app.routes.sync.CoverCacheService", FakeCoverCache)
+    monkeypatch.setattr("app.routes.sync.get_app_settings_store", lambda: make_store())
     monkeypatch.setattr(
-        "app.api.get_settings",
+        "app.routes.sync.get_settings",
+        lambda: SimpleNamespace(
+            youranimes_base_url="https://youranimes.tw",
+            mikan_base_url="https://mikanani.me",
+            cover_cache_dir=cache_dir,
+            cover_cache_public_path="/api/covers",
+        ),
+    )
+    monkeypatch.setattr(
+        "app.routes.common.get_settings",
         lambda: SimpleNamespace(
             youranimes_base_url="https://youranimes.tw",
             mikan_base_url="https://mikanani.me",
@@ -270,9 +273,9 @@ def test_search_anime_handles_duplicate_source_records(monkeypatch) -> None:
             for record in records:
                 record.cover_url = f"{self.public_prefix}/dup-alpha.webp"
 
-    monkeypatch.setattr("app.api.YourAnimesScraper", FakeScraper)
-    monkeypatch.setattr("app.api.CoverCacheService", FakeCoverCache)
-    monkeypatch.setattr("app.api.get_app_settings_store", lambda: make_store())
+    monkeypatch.setattr("app.routes.sync.get_source_client", lambda source_name, settings: FakeScraper(settings.youranimes_base_url))
+    monkeypatch.setattr("app.routes.sync.CoverCacheService", FakeCoverCache)
+    monkeypatch.setattr("app.routes.sync.get_app_settings_store", lambda: make_store())
 
     page = asyncio.run(search_anime(AnimeSearchRequest(year=2026, season=4), db))
 
@@ -310,11 +313,20 @@ def test_search_anime_uses_selected_mikan_source(monkeypatch, tmp_path) -> None:
             for record in records:
                 record.cover_url = f"{self.public_prefix}/mikan-681.jpg"
 
-    monkeypatch.setattr("app.api.MikanScraper", FakeMikanScraper)
-    monkeypatch.setattr("app.api.CoverCacheService", FakeCoverCache)
-    monkeypatch.setattr("app.api.get_app_settings_store", lambda: make_store(anime_source="mikan"))
+    monkeypatch.setattr("app.routes.sync.get_source_client", lambda source_name, settings: FakeMikanScraper(settings.mikan_base_url))
+    monkeypatch.setattr("app.routes.sync.CoverCacheService", FakeCoverCache)
+    monkeypatch.setattr("app.routes.sync.get_app_settings_store", lambda: make_store(anime_source="mikan"))
     monkeypatch.setattr(
-        "app.api.get_settings",
+        "app.routes.sync.get_settings",
+        lambda: SimpleNamespace(
+            youranimes_base_url="https://youranimes.tw",
+            mikan_base_url="https://mikanani.me",
+            cover_cache_dir=cache_dir,
+            cover_cache_public_path="/api/covers",
+        ),
+    )
+    monkeypatch.setattr(
+        "app.routes.common.get_settings",
         lambda: SimpleNamespace(
             youranimes_base_url="https://youranimes.tw",
             mikan_base_url="https://mikanani.me",
@@ -354,10 +366,10 @@ def test_search_anime_replace_season_falls_back_to_incremental_for_full_year(mon
         captured["source"] = source
         return 0, 0
 
-    monkeypatch.setattr("app.api.YourAnimesScraper", FakeScraper)
-    monkeypatch.setattr("app.api.CoverCacheService", FakeCoverCache)
-    monkeypatch.setattr("app.api.upsert_records", fake_upsert_records)
-    monkeypatch.setattr("app.api.get_app_settings_store", lambda: make_store(sync_strategy="replace-season"))
+    monkeypatch.setattr("app.routes.sync.get_source_client", lambda source_name, settings: FakeScraper(settings.youranimes_base_url))
+    monkeypatch.setattr("app.routes.sync.CoverCacheService", FakeCoverCache)
+    monkeypatch.setattr("app.routes.sync.upsert_records", fake_upsert_records)
+    monkeypatch.setattr("app.routes.sync.get_app_settings_store", lambda: make_store(sync_strategy="replace-season"))
 
     page = asyncio.run(search_anime(AnimeSearchRequest(year=2026, season=None), db))
 
@@ -390,10 +402,10 @@ def test_search_anime_replace_season_keeps_single_season_prune(monkeypatch) -> N
         captured["source"] = source
         return 0, 0
 
-    monkeypatch.setattr("app.api.YourAnimesScraper", FakeScraper)
-    monkeypatch.setattr("app.api.CoverCacheService", FakeCoverCache)
-    monkeypatch.setattr("app.api.upsert_records", fake_upsert_records)
-    monkeypatch.setattr("app.api.get_app_settings_store", lambda: make_store(sync_strategy="replace-season"))
+    monkeypatch.setattr("app.routes.sync.get_source_client", lambda source_name, settings: FakeScraper(settings.youranimes_base_url))
+    monkeypatch.setattr("app.routes.sync.CoverCacheService", FakeCoverCache)
+    monkeypatch.setattr("app.routes.sync.upsert_records", fake_upsert_records)
+    monkeypatch.setattr("app.routes.sync.get_app_settings_store", lambda: make_store(sync_strategy="replace-season"))
 
     page = asyncio.run(search_anime(AnimeSearchRequest(year=2026, season=2), db))
 
@@ -443,8 +455,8 @@ def test_get_anime_hydrates_missing_detail_fields(monkeypatch) -> None:
             for record in records:
                 record.cover_url = f"{self.public_prefix}/detail-alpha.webp"
 
-    monkeypatch.setattr("app.api._get_source_client", lambda source_name, settings: FakeSourceClient())
-    monkeypatch.setattr("app.api.CoverCacheService", FakeCoverCache)
+    monkeypatch.setattr("app.routes.common.get_source_client", lambda source_name, settings: FakeSourceClient())
+    monkeypatch.setattr("app.routes.common.CoverCacheService", FakeCoverCache)
 
     detail = asyncio.run(get_anime(anime.id, db))
 
@@ -503,10 +515,10 @@ def test_get_anime_refreshes_known_placeholder_cover(monkeypatch, tmp_path) -> N
             for record in records:
                 record.cover_url = f"{self.public_prefix}/chiikawa-fixed.webp"
 
-    monkeypatch.setattr("app.api._get_source_client", lambda source_name, settings: FakeSourceClient())
-    monkeypatch.setattr("app.api.CoverCacheService", FakeCoverCache)
+    monkeypatch.setattr("app.routes.common.get_source_client", lambda source_name, settings: FakeSourceClient())
+    monkeypatch.setattr("app.routes.common.CoverCacheService", FakeCoverCache)
     monkeypatch.setattr(
-        "app.api.get_settings",
+        "app.routes.common.get_settings",
         lambda: SimpleNamespace(
             cover_cache_dir=tmp_path / "covers",
             cover_cache_public_path="/api/covers",

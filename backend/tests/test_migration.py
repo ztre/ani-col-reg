@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy import create_engine, text
 
 from app.database import _rebuild_collection_table
@@ -49,5 +51,5 @@ def test_collection_table_rebuild_removes_rating_fields_and_keeps_notes_tags() -
         row = conn.execute(text("SELECT organize_status, note, release_tags, group_tags FROM collection_item WHERE id = 7")).mappings().one()
         assert row["organize_status"] == "pending"
         assert row["note"] == "手工备注"
-        assert row["release_tags"] == "BDRip, 1080p"
-        assert row["group_tags"] is None
+        assert json.loads(row["release_tags"]) == ["BDRip", "1080p"]
+        assert json.loads(row["group_tags"]) == []

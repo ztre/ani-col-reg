@@ -1,5 +1,43 @@
-export const DEFAULT_RELEASE_TAGS = ['BDRip', 'WebRip', 'WEB-DL', 'HDTV', '720p', '1080p', '2160p', 'HEVC', 'AVC']
-export const DEFAULT_GROUP_TAGS = ['ANi', 'Lilith-Raws', 'NC-Raws', 'Skymoon-Raws', 'LoliHouse', '喵萌奶茶屋']
+export interface TagLibraryEntry {
+  value: string
+  label: string
+  source: 'default' | 'user' | 'recent' | 'imported'
+  color?: string
+  recommended?: boolean
+  popularity?: number
+  lastUsedAt?: string | null
+}
+
+export interface TagLibraryState {
+  version: 2
+  entries: TagLibraryEntry[]
+  recent: string[]
+  popular: string[]
+}
+
+const DEFAULT_RELEASE_ENTRIES: TagLibraryEntry[] = [
+  { value: 'BDRip', label: 'BDRip', source: 'default', color: 'ice', recommended: true },
+  { value: 'WebRip', label: 'WebRip', source: 'default', color: 'cyan', recommended: true },
+  { value: 'WEB-DL', label: 'WEB-DL', source: 'default', color: 'cyan', recommended: true },
+  { value: 'HDTV', label: 'HDTV', source: 'default', color: 'slate' },
+  { value: '720p', label: '720p', source: 'default', color: 'blue' },
+  { value: '1080p', label: '1080p', source: 'default', color: 'blue', recommended: true },
+  { value: '2160p', label: '2160p', source: 'default', color: 'amber' },
+  { value: 'HEVC', label: 'HEVC', source: 'default', color: 'teal', recommended: true },
+  { value: 'AVC', label: 'AVC', source: 'default', color: 'slate' },
+]
+
+const DEFAULT_GROUP_ENTRIES: TagLibraryEntry[] = [
+  { value: 'ANi', label: 'ANi', source: 'default', color: 'mint', recommended: true },
+  { value: 'Lilith-Raws', label: 'Lilith-Raws', source: 'default', color: 'sky', recommended: true },
+  { value: 'NC-Raws', label: 'NC-Raws', source: 'default', color: 'sky' },
+  { value: 'Skymoon-Raws', label: 'Skymoon-Raws', source: 'default', color: 'slate' },
+  { value: 'LoliHouse', label: 'LoliHouse', source: 'default', color: 'blue', recommended: true },
+  { value: '喵萌奶茶屋', label: '喵萌奶茶屋', source: 'default', color: 'mint' },
+]
+
+export const DEFAULT_RELEASE_TAGS = DEFAULT_RELEASE_ENTRIES.map((entry) => entry.value)
+export const DEFAULT_GROUP_TAGS = DEFAULT_GROUP_ENTRIES.map((entry) => entry.value)
 
 const RELEASE_TAG_EXCLUSIVE_GROUPS = {
   source: new Set(['bdrip', 'webrip', 'webdl', 'hdtv']),
@@ -19,12 +57,12 @@ const TAG_LIBRARY_STORAGE = {
   release: {
     key: 'ani-col-reg.release-tag-library',
     legacyKey: 'ani-col-reg.release-tags',
-    defaults: DEFAULT_RELEASE_TAGS,
+    defaults: DEFAULT_RELEASE_ENTRIES,
   },
   group: {
     key: 'ani-col-reg.group-tag-library',
     legacyKey: 'ani-col-reg.group-tags',
-    defaults: DEFAULT_GROUP_TAGS,
+    defaults: DEFAULT_GROUP_ENTRIES,
   },
 } as const
 
@@ -60,44 +98,25 @@ export function mergeTagOptions(library: string[], current: string[]) {
 }
 
 export function loadTagLibrary(kind: TagLibraryKind) {
-  const config = TAG_LIBRARY_STORAGE[kind]
-  if (typeof window === 'undefined') {
-    return [...config.defaults]
-  }
-
-  const stored = readTagLibrary(config.key)
-  if (stored !== null) {
-    return saveTagLibrary(kind, [...config.defaults, ...stored])
-  }
-
-  const legacy = readTagLibrary(config.legacyKey) ?? []
-  const migrated = uniqueTags([...config.defaults, ...legacy])
-  return saveTagLibrary(kind, migrated)
+  return loadTagLibraryState(kind).entries.map((entry) => entry.value)
 }
 
 export function saveTagLibrary(kind: TagLibraryKind, tags: string[]) {
-  const config = TAG_LIBRARY_STORAGE[kind]
-  const normalized = uniqueTags(tags)
-  if (typeof window === 'undefined') {
-    return normalized
-  }
-
-  try {
-    window.localStorage.setItem(config.key, JSON.stringify(normalized))
-    window.localStorage.removeItem(config.legacyKey)
-  } catch {
-    return normalized
-  }
-
-  return normalized
+  const nextState = applyTagValues(kind, loadTagLibraryState(kind), tags)
+  return persistTagLibraryState(kind, nextState).entries.map((entry) => entry.value)
 }
 
 export function resetTagLibrary(kind: TagLibraryKind) {
-  return saveTagLibrary(kind, [...TAG_LIBRARY_STORAGE[kind].defaults])
+  return persistTagLibraryState(kind, defaultTagLibraryState(kind)).entries.map((entry) => entry.value)
 }
 
 export function rememberTagLibrary(kind: TagLibraryKind, currentLibrary: string[], tags: string[]) {
-  return saveTagLibrary(kind, [...currentLibrary, ...tags])
+  const state = applyTagValues(kind, loadTagLibraryState(kind), [...currentLibrary, ...tags], tags)
+  return persistTagLibraryState(kind, state).entries.map((entry) => entry.value)
+}
+
+export function loadTagLibraryEntries(kind: TagLibraryKind) {
+  return loadTagLibraryState(kind).entries
 }
 
 export function splitReleaseTagsByGroup(tags: string[]) {
@@ -148,4 +167,177 @@ function readTagLibrary(storageKey: string) {
   } catch {
     return []
   }
+}
+
+function loadTagLibraryState(kind: TagLibraryKind): TagLibraryState {
+  const config = TAG_LIBRARY_STORAGE[kind]
+
+  if (typeof window === 'undefined') {
+    return defaultTagLibraryState(kind)
+  }
+
+  const stored = readTagLibraryState(config.key)
+  if (stored) {
+    return persistTagLibraryState(kind, stored)
+  }
+
+  const legacy = readTagLibrary(config.legacyKey) ?? []
+  if (legacy.length > 0) {
+    return persistTagLibraryState(kind, applyTagValues(kind, defaultTagLibraryState(kind), [...config.defaults.map((entry) => entry.value), ...legacy]))
+  }
+
+  return persistTagLibraryState(kind, defaultTagLibraryState(kind))
+}
+
+function defaultTagLibraryState(kind: TagLibraryKind): TagLibraryState {
+  const defaults = TAG_LIBRARY_STORAGE[kind].defaults.map((entry) => ({ ...entry }))
+  return {
+    version: 2,
+    entries: defaults,
+    recent: [],
+    popular: defaults.filter((entry) => entry.recommended).map((entry) => entry.value).slice(0, 8)
+  }
+}
+
+function applyTagValues(kind: TagLibraryKind, baseState: TagLibraryState, tags: string[], usedTags: string[] = []) {
+  const previousEntries = new Map(baseState.entries.map((entry) => [normalizeTagKey(entry.value), entry]))
+  const nextEntries = uniqueTags(tags)
+    .map((value) => {
+      const key = normalizeTagKey(value)
+      const previous = previousEntries.get(key)
+      const fallback = defaultTagEntry(kind, value)
+      const entry = mergeTagEntry(fallback, previous)
+
+      if (usedTags.some((used) => normalizeTagKey(used) === key)) {
+        entry.popularity = (entry.popularity || 0) + 1
+        entry.lastUsedAt = new Date().toISOString()
+      }
+
+      return entry
+    })
+
+  const recent = usedTags.length > 0 ? mergeRecentTags(baseState.recent, usedTags) : baseState.recent
+
+  return finalizeTagLibraryState({
+    version: 2,
+    entries: nextEntries,
+    recent,
+    popular: baseState.popular
+  })
+}
+
+function persistTagLibraryState(kind: TagLibraryKind, state: TagLibraryState) {
+  const config = TAG_LIBRARY_STORAGE[kind]
+  const normalized = finalizeTagLibraryState(state)
+
+  if (typeof window === 'undefined') {
+    return normalized
+  }
+
+  try {
+    window.localStorage.setItem(config.key, JSON.stringify(normalized))
+    window.localStorage.removeItem(config.legacyKey)
+  } catch {
+    return normalized
+  }
+
+  return normalized
+}
+
+function readTagLibraryState(storageKey: string): TagLibraryState | null {
+  try {
+    const raw = window.localStorage.getItem(storageKey)
+    if (!raw) {
+      return null
+    }
+
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return null
+    }
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.entries)) {
+      return null
+    }
+
+    return finalizeTagLibraryState({
+      version: 2,
+      entries: parsed.entries,
+      recent: Array.isArray(parsed.recent) ? parsed.recent : [],
+      popular: Array.isArray(parsed.popular) ? parsed.popular : []
+    })
+  } catch {
+    return null
+  }
+}
+
+function finalizeTagLibraryState(state: TagLibraryState): TagLibraryState {
+  const entries = state.entries
+    .map((entry) => normalizeTagEntry(entry))
+    .filter((entry, index, all) => all.findIndex((candidate) => normalizeTagKey(candidate.value) === normalizeTagKey(entry.value)) === index)
+
+  const entryKeySet = new Set(entries.map((entry) => normalizeTagKey(entry.value)))
+  const recent = uniqueTags(state.recent).filter((value) => entryKeySet.has(normalizeTagKey(value))).slice(0, 8)
+  const popular = uniqueTags([
+    ...state.popular,
+    ...entries
+      .filter((entry) => entry.recommended || (entry.popularity || 0) > 0)
+      .sort((left, right) => (right.popularity || 0) - (left.popularity || 0) || Number(Boolean(right.recommended)) - Number(Boolean(left.recommended)))
+      .map((entry) => entry.value)
+  ]).filter((value) => entryKeySet.has(normalizeTagKey(value))).slice(0, 8)
+
+  return {
+    version: 2,
+    entries,
+    recent,
+    popular
+  }
+}
+
+function defaultTagEntry(kind: TagLibraryKind, value: string): TagLibraryEntry {
+  const key = normalizeTagKey(value)
+  const defaults = TAG_LIBRARY_STORAGE[kind].defaults
+  const matchedDefault = defaults.find((entry) => normalizeTagKey(entry.value) === key)
+  if (matchedDefault) {
+    return { ...matchedDefault }
+  }
+
+  return {
+    value: value.trim(),
+    label: value.trim(),
+    source: 'user'
+  }
+}
+
+function mergeTagEntry(base: TagLibraryEntry, override?: TagLibraryEntry | null): TagLibraryEntry {
+  if (!override) {
+    return normalizeTagEntry(base)
+  }
+
+  return normalizeTagEntry({
+    ...base,
+    ...override,
+    value: override.value || base.value,
+    label: override.label || base.label,
+  })
+}
+
+function normalizeTagEntry(entry: TagLibraryEntry): TagLibraryEntry {
+  const value = entry.value.trim()
+  return {
+    value,
+    label: (entry.label || value).trim(),
+    source: entry.source || 'user',
+    color: entry.color,
+    recommended: Boolean(entry.recommended),
+    popularity: typeof entry.popularity === 'number' ? entry.popularity : undefined,
+    lastUsedAt: entry.lastUsedAt || null,
+  }
+}
+
+function mergeRecentTags(existing: string[], usedTags: string[]) {
+  return uniqueTags([...usedTags.slice().reverse(), ...existing]).slice(0, 8)
+}
+
+function normalizeTagKey(value: string) {
+  return value.trim().toLowerCase()
 }

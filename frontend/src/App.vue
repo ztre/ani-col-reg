@@ -7,7 +7,7 @@
         <span class="brand-mark">A</span>
         <div class="brand-copy">
           <strong>{{ appName }}</strong>
-          <small>Season Library</small>
+          <small>Poster Wall</small>
         </div>
       </div>
 
@@ -28,20 +28,18 @@
 
       <div class="sidebar-note">
         <span class="sidebar-note-label">数据源</span>
-        <strong>YourAnimes</strong>
-        <p>保持轻量浏览与本地收藏整理。</p>
+        <strong>{{ activeSourceLabel }}</strong>
+        <p>深色海报墙浏览与本地收藏整理并行。</p>
       </div>
     </el-aside>
 
     <el-container>
       <el-header class="topbar">
-        <div class="topbar-copy">
-          <span class="topbar-eyebrow">Anime Console</span>
-          <strong>{{ pageTitle }}</strong>
-        </div>
-
         <div class="topbar-actions">
           <span v-if="session.state.status?.requires_password_change" class="warning-chip">请修改默认密码</span>
+          <el-button text class="topbar-link topbar-theme-toggle" :icon="themeToggleIcon" :aria-label="themeToggleLabel" @click="toggleTheme">
+            {{ themeToggleText }}
+          </el-button>
           <el-button text class="topbar-link" :icon="Setting" @click="router.push('/settings')">设置</el-button>
           <span class="user-chip">
             <el-icon><User /></el-icon>
@@ -59,19 +57,24 @@
 </template>
 
 <script setup lang="ts">
-import { Grid, Setting, Star, SwitchButton, User } from '@element-plus/icons-vue'
+import { Grid, MoonNight, Setting, Star, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useAuthSession } from './auth'
+import { useThemeMode } from './theme'
 
 const route = useRoute()
 const router = useRouter()
 const session = useAuthSession()
+const { isLight, themeMode, toggleTheme } = useThemeMode()
 
 const isLoginPage = computed(() => route.path === '/login')
-const pageTitle = computed(() => String(route.meta.title || '番剧库'))
 const appName = computed(() => session.state.settings?.app_name || session.state.status?.app_name || '番剧收藏')
+const activeSourceLabel = computed(() => (session.state.settings?.anime_source === 'mikan' ? 'Mikan' : 'YourAnimes'))
+const themeToggleLabel = computed(() => (isLight.value ? '切换为深色' : '切换为浅色'))
+const themeToggleIcon = computed(() => (isLight.value ? MoonNight : Sunny))
+const themeToggleText = computed(() => (themeMode.value === 'light' ? '浅色模式' : '深色模式'))
 
 async function handleLogout() {
   await session.logout()
