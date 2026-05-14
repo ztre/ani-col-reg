@@ -212,8 +212,8 @@ function onRemoved(animeId: number) {
   margin-bottom: 12px;
   padding: 10px 14px;
   color: var(--text-soft);
-  background: rgba(18, 31, 50, 0.72);
-  border: 1px solid rgba(99, 182, 255, 0.24);
+  background: var(--notice-info-bg);
+  border: 1px solid var(--notice-info-border);
   border-radius: 14px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   font-size: 13px;
@@ -229,14 +229,14 @@ function onRemoved(animeId: number) {
   background: var(--surface-card);
   border: 1px solid var(--surface-line);
   border-radius: 28px;
-  box-shadow: 0 30px 80px rgba(1, 5, 11, 0.56);
+  box-shadow: var(--elevation-dialog);
   backdrop-filter: blur(22px);
 }
 
 :deep(.anime-dialog .el-dialog__header) {
   flex-shrink: 0;
   padding: 22px 24px 0;
-  border-bottom: 1px solid rgba(144, 173, 214, 0.08);
+  border-bottom: 1px solid var(--panel-soft-border);
 }
 
 :deep(.anime-dialog .el-dialog__title) {

@@ -1,0 +1,58 @@
+<svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="settingsLightMain" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFDFE"/>
+      <stop offset="100%" stop-color="#F3EEFF"/>
+    </linearGradient>
+    <linearGradient id="settingsLightAccent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFAAC9"/>
+      <stop offset="52%" stop-color="#A9CBFF"/>
+      <stop offset="100%" stop-color="#8FE6D3"/>
+    </linearGradient>
+    <radialGradient id="settingsLightHalo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(344 190) rotate(90) scale(164 172)">
+      <stop stop-color="#FFD7E9" stop-opacity="0.74"/>
+      <stop offset="1" stop-color="#FFD7E9" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="344" cy="190" r="164" fill="url(#settingsLightHalo)"/>
+  <circle cx="518" cy="112" r="56" fill="#FFF7FC" fill-opacity="0.78"/>
+
+  <g transform="translate(188 92)">
+    <rect x="0" y="0" width="274" height="206" rx="34" fill="url(#settingsLightMain)"/>
+    <rect x="20" y="26" width="92" height="12" rx="6" fill="#75659E" fill-opacity="0.88"/>
+    <rect x="20" y="48" width="138" height="8" rx="4" fill="#A18FBE" fill-opacity="0.42"/>
+    <rect x="20" y="82" width="234" height="42" rx="21" fill="#FFFFFF" fill-opacity="0.88"/>
+    <circle cx="56" cy="103" r="18" fill="url(#settingsLightAccent)"/>
+    <rect x="86" y="94" width="82" height="10" rx="5" fill="#72629B" fill-opacity="0.88"/>
+    <rect x="86" y="110" width="112" height="8" rx="4" fill="#A18FBE" fill-opacity="0.36"/>
+    <rect x="20" y="138" width="234" height="42" rx="21" fill="#FFFFFF" fill-opacity="0.88"/>
+    <rect x="34" y="149" width="54" height="20" rx="10" fill="#B5D6FF"/>
+    <circle cx="78" cy="159" r="10" fill="#FFFFFF"/>
+    <rect x="106" y="150" width="78" height="10" rx="5" fill="#72629B" fill-opacity="0.88"/>
+    <rect x="106" y="166" width="98" height="8" rx="4" fill="#A18FBE" fill-opacity="0.36"/>
+    <rect x="20" y="194" width="110" height="18" rx="9" fill="#FFE1ED"/>
+    <rect x="138" y="194" width="84" height="18" rx="9" fill="#E4F1FF"/>
+  </g>
+
+  <g transform="translate(474 118) rotate(8 64 76)">
+    <rect x="0" y="0" width="128" height="152" rx="28" fill="#FFF8FD" fill-opacity="0.96"/>
+    <circle cx="64" cy="50" r="26" stroke="#A9CBFF" stroke-width="12" stroke-opacity="0.72"/>
+    <circle cx="64" cy="50" r="12" fill="#FFAAC9"/>
+    <path d="M64 16V28M64 72V84M30 50H18M110 50H98M39 25L47 33M89 67L97 75M39 75L47 67M89 33L97 25" stroke="#F1B1C9" stroke-width="6" stroke-linecap="round"/>
+    <rect x="24" y="100" width="80" height="12" rx="6" fill="#7A6AA0" fill-opacity="0.88"/>
+    <rect x="24" y="120" width="60" height="8" rx="4" fill="#A18FBE" fill-opacity="0.38"/>
+  </g>
+
+  <g transform="translate(80 120)">
+    <circle cx="64" cy="64" r="58" stroke="#FFFFFF" stroke-opacity="0.58" stroke-width="4" stroke-dasharray="8 10"/>
+    <circle cx="64" cy="64" r="36" fill="#FFFFFF" fill-opacity="0.18"/>
+    <path d="M64 24V42M64 86V104M24 64H42M86 64H104M37 37L49 49M79 79L91 91M37 91L49 79M79 49L91 37" stroke="url(#settingsLightAccent)" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <g fill="#FFB7D1" fill-opacity="0.68">
+    <ellipse cx="54" cy="62" rx="10" ry="5" transform="rotate(-24 54 62)"/>
+    <ellipse cx="612" cy="206" rx="12" ry="6" transform="rotate(-36 612 206)"/>
+    <ellipse cx="170" cy="360" rx="12" ry="5" transform="rotate(18 170 360)"/>
+  </g>
+</svg>

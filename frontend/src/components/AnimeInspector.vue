@@ -170,9 +170,9 @@ function posterFallback(title: string) {
   overflow: hidden;
   border-radius: 24px;
   aspect-ratio: 3 / 4;
-  background: linear-gradient(135deg, rgba(32, 53, 82, 0.94), rgba(8, 18, 31, 0.98));
+  background: var(--poster-card-bg);
   border: 1px solid var(--surface-line);
-  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.42);
+  box-shadow: var(--elevation-card);
 }
 
 .inspector-poster img,
@@ -191,7 +191,7 @@ function posterFallback(title: string) {
   display: grid;
   place-items: center;
   color: #ffffff;
-  background: linear-gradient(135deg, #5dacf4, #183252);
+  background: var(--poster-fallback-gradient);
   font-size: 38px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -205,7 +205,7 @@ function posterFallback(title: string) {
   background: var(--surface-card);
   border: 1px solid var(--surface-line);
   border-radius: 24px;
-  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.34);
+  box-shadow: var(--elevation-card);
 }
 
 .inspector-heading {
@@ -272,21 +272,21 @@ function posterFallback(title: string) {
 }
 
 .chip--library {
-  color: #dff3ff;
-  background: rgba(46, 95, 149, 0.36);
-  border-color: rgba(124, 188, 255, 0.26);
+  color: var(--chip-library-text);
+  background: var(--chip-library-bg);
+  border-color: var(--chip-library-border);
 }
 
 .chip--pending {
-  color: #ffd7ae;
-  background: rgba(138, 97, 16, 0.28);
-  border-color: rgba(255, 205, 120, 0.24);
+  color: var(--chip-pending-text);
+  background: var(--chip-pending-bg);
+  border-color: var(--chip-pending-border);
 }
 
 .chip--emby {
-  color: #b9f3d1;
-  background: rgba(21, 92, 63, 0.34);
-  border-color: rgba(87, 215, 156, 0.22);
+  color: var(--chip-emby-text);
+  background: var(--chip-emby-bg);
+  border-color: var(--chip-emby-border);
 }
 
 .inspector-meta-grid {
@@ -301,7 +301,7 @@ function posterFallback(title: string) {
   gap: 6px;
   padding: 12px 13px;
   background: var(--surface-card-soft);
-  border: 1px solid rgba(144, 173, 214, 0.12);
+  border: 1px solid var(--panel-soft-border);
   border-radius: 16px;
 }
 
@@ -314,7 +314,7 @@ function posterFallback(title: string) {
 }
 
 .meta-card strong {
-  color: rgba(218, 230, 247, 0.72);
+  color: var(--text-muted);
   font-size: 12px;
   line-height: 1.25;
 }
@@ -334,7 +334,7 @@ function posterFallback(title: string) {
   background: var(--surface-card);
   border: 1px solid var(--surface-line);
   border-radius: 24px;
-  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.34);
+  box-shadow: var(--elevation-card);
 }
 
 .inspector-panel--side {
@@ -347,8 +347,8 @@ function posterFallback(title: string) {
 }
 
 .meta-tags :deep(.el-tag) {
-  background: rgba(18, 31, 50, 0.72);
-  border-color: rgba(144, 173, 214, 0.18);
+  background: var(--surface-chip);
+  border-color: var(--surface-line);
   color: var(--text-soft);
 }
 

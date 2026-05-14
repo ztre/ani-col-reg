@@ -73,20 +73,20 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
   aspect-ratio: 2 / 3;
   padding: 0;
   overflow: hidden;
-  color: #f7f9ff;
+  color: var(--poster-overlay-text);
   text-align: left;
   cursor: pointer;
-  background: linear-gradient(180deg, rgba(8, 17, 32, 0.78), rgba(8, 17, 32, 0.98));
-  border: 1px solid rgba(146, 173, 214, 0.18);
+  background: var(--poster-card-bg);
+  border: 1px solid var(--poster-card-border);
   border-radius: 24px;
-  box-shadow: 0 22px 44px rgba(4, 10, 20, 0.42);
+  box-shadow: var(--elevation-card-soft);
   isolation: isolate;
 }
 
 .anime-poster-card::before {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(7, 14, 28, 0.02) 0%, rgba(7, 14, 28, 0.12) 36%, rgba(7, 14, 28, 0.84) 100%);
+  background: var(--poster-overlay);
   content: '';
   pointer-events: none;
   z-index: 1;
@@ -95,7 +95,7 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
 .anime-poster-card::after {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(133, 196, 255, 0.1), transparent 32%, rgba(5, 10, 18, 0.22));
+  background: var(--poster-sheen);
   opacity: 0;
   content: '';
   transition: opacity 220ms ease;
@@ -105,8 +105,8 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
 
 .anime-poster-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 28px 52px rgba(4, 10, 20, 0.5);
-  border-color: rgba(148, 191, 241, 0.32);
+  box-shadow: var(--elevation-hover);
+  border-color: var(--poster-hover-border);
 }
 
 .anime-poster-card:hover::after,
@@ -115,7 +115,7 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
 }
 
 .anime-poster-card:focus-visible {
-  outline: 2px solid rgba(123, 188, 255, 0.92);
+  outline: 2px solid var(--poster-focus-outline);
   outline-offset: 4px;
 }
 
@@ -142,10 +142,10 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
 .anime-poster-card__fallback {
   display: grid;
   place-items: center;
-  color: rgba(248, 251, 255, 0.96);
+  color: var(--poster-overlay-text);
   background:
-    radial-gradient(circle at top, rgba(126, 206, 255, 0.36), transparent 42%),
-    linear-gradient(135deg, #19314f, #10233d 54%, #0d1625 100%);
+    radial-gradient(circle at top, color-mix(in srgb, var(--accent) 42%, transparent), transparent 42%),
+    var(--poster-fallback-gradient);
   font-size: clamp(28px, 6vw, 44px);
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -163,7 +163,7 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--badge-border);
   border-radius: 999px;
   backdrop-filter: blur(14px);
 }
@@ -173,24 +173,24 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
 }
 
 .anime-poster-card__badge--ongoing {
-  color: #dfffe7;
-  background: rgba(88, 188, 121, 0.3);
+  color: var(--badge-ongoing-text);
+  background: var(--badge-ongoing-bg);
 }
 
 .anime-poster-card__badge--finished {
-  color: #d7e4ff;
-  background: rgba(73, 109, 183, 0.32);
+  color: var(--badge-finished-text);
+  background: var(--badge-finished-bg);
 }
 
 .anime-poster-card__badge--new {
-  color: #fff4cf;
-  background: rgba(212, 154, 59, 0.32);
+  color: var(--badge-new-text);
+  background: var(--badge-new-bg);
 }
 
 .anime-poster-card__score {
   right: 14px;
-  color: #fff4d1;
-  background: rgba(13, 18, 30, 0.58);
+  color: var(--poster-score-text);
+  background: var(--poster-score-bg);
 }
 
 .anime-poster-card__overlay {
@@ -222,14 +222,14 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
 }
 
 .anime-poster-card__heading h2 {
-  color: #f5f7ff;
+  color: var(--poster-overlay-text);
   font-size: 1.12rem;
   line-height: 1.25;
-  text-shadow: 0 6px 16px rgba(4, 10, 20, 0.42);
+  text-shadow: var(--poster-title-shadow);
 }
 
 .anime-poster-card__heading p {
-  color: rgba(219, 228, 242, 0.86);
+  color: color-mix(in srgb, var(--poster-overlay-text) 86%, transparent);
   font-size: 0.82rem;
   line-height: 1.45;
 }
@@ -238,7 +238,7 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
   display: -webkit-box;
   overflow: hidden;
   max-width: 92%;
-  color: rgba(230, 237, 248, 0.84);
+  color: color-mix(in srgb, var(--poster-overlay-text) 84%, transparent);
   font-size: 0.78rem;
   line-height: 1.55;
   opacity: 0;
@@ -255,7 +255,7 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
 }
 
 .anime-poster-card__meta {
-  color: rgba(194, 207, 227, 0.86);
+  color: color-mix(in srgb, var(--poster-overlay-text) 78%, transparent);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -272,9 +272,9 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
   align-items: center;
   min-height: 26px;
   padding: 0 10px;
-  color: rgba(231, 238, 249, 0.88);
-  background: rgba(17, 27, 43, 0.42);
-  border: 1px solid rgba(198, 215, 241, 0.14);
+  color: var(--poster-tag-text);
+  background: var(--poster-tag-bg);
+  border: 1px solid var(--poster-tag-border);
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 600;
@@ -290,13 +290,13 @@ const collectionLabel = computed(() => animeCollectionLabel(props.anime.collecti
   display: inline-flex;
   align-items: center;
   min-height: 24px;
-  color: rgba(208, 219, 237, 0.82);
+  color: color-mix(in srgb, var(--poster-overlay-text) 82%, transparent);
   font-size: 0.76rem;
   font-weight: 700;
 }
 
 .anime-poster-card__collection--active {
-  color: #eff6ff;
+  color: var(--poster-overlay-text);
 }
 
 @media (max-width: 640px) {

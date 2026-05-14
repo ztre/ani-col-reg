@@ -34,11 +34,11 @@ withDefaults(
   aspect-ratio: 2 / 3;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(15, 24, 39, 0.92), rgba(8, 14, 26, 0.98)),
-    linear-gradient(90deg, rgba(103, 140, 192, 0.08), rgba(103, 140, 192, 0.02));
+    var(--surface-card),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-strong) 8%, transparent), transparent);
   border: 1px solid var(--surface-line);
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(3, 8, 15, 0.32);
+  box-shadow: var(--elevation-card-soft);
 }
 
 .anime-loading-wall__shine {

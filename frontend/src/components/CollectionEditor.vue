@@ -210,7 +210,7 @@ async function remove() {
 }
 
 .collection-form :deep(.el-form-item__label) {
-  color: rgba(224, 233, 247, 0.84);
+  color: var(--text-soft);
   font-weight: 700;
 }
 
@@ -278,7 +278,7 @@ async function remove() {
 .collection-form :deep(.el-button) {
   width: 100%;
   border-radius: 16px;
-  box-shadow: 0 14px 30px rgba(3, 8, 15, 0.24);
+  box-shadow: var(--elevation-floating);
 }
 
 .collection-form :deep(.collection-remove) {

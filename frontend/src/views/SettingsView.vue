@@ -447,18 +447,48 @@ onMounted(() => {
 }
 
 .settings-hero {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   align-items: flex-end;
   justify-content: space-between;
-  padding: 28px 30px;
-  background:
-    radial-gradient(circle at top right, rgba(72, 139, 203, 0.24), transparent 30%),
-    linear-gradient(135deg, rgba(13, 24, 41, 0.98), rgba(8, 16, 28, 0.94));
+  padding: 28px clamp(240px, 34vw, 360px) 28px 30px;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--hero-surface);
   border: 1px solid var(--surface-line);
   border-radius: 28px;
-  box-shadow: 0 24px 60px rgba(2, 7, 15, 0.32);
+  box-shadow: var(--elevation-hero);
+}
+
+.settings-hero::before {
+  position: absolute;
+  inset: 14px 12px 10px auto;
+  width: min(40%, 280px);
+  background-image: var(--hero-settings-image);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: right center;
+  content: '';
+  pointer-events: none;
+  opacity: 0.96;
+  z-index: 0;
+}
+
+.settings-hero::after {
+  position: absolute;
+  inset: auto -6% -34% auto;
+  width: 300px;
+  height: 300px;
+  background: var(--hero-art-glow);
+  content: '';
+  pointer-events: none;
+}
+
+.settings-hero > * {
+  position: relative;
+  z-index: 1;
 }
 
 .settings-eyebrow,
@@ -502,7 +532,7 @@ onMounted(() => {
   background: var(--surface-card);
   border: 1px solid var(--surface-line);
   border-radius: 24px;
-  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.32);
+  box-shadow: var(--elevation-card);
 }
 
 .settings-card--wide {
@@ -565,7 +595,7 @@ onMounted(() => {
 .tag-manager-reset {
   min-height: 40px;
   padding-inline: 0;
-  color: rgba(173, 204, 238, 0.72);
+  color: var(--tag-manager-muted-text);
 }
 
 .tag-manager-reset:hover,
@@ -584,15 +614,15 @@ onMounted(() => {
   min-width: 96px;
   min-height: 46px;
   color: var(--text-soft);
-  background: rgba(15, 26, 42, 0.68);
-  border-color: rgba(144, 173, 214, 0.16);
+  background: var(--tag-manager-add-bg);
+  border-color: var(--tag-manager-add-border);
 }
 
 .tag-manager-add:hover,
 .tag-manager-add:focus-visible {
   color: var(--text-strong);
-  background: rgba(18, 31, 50, 0.82);
-  border-color: rgba(144, 173, 214, 0.24);
+  background: var(--tag-manager-add-hover-bg);
+  border-color: var(--tag-manager-add-hover-border);
 }
 
 .tag-chip-list {
@@ -605,21 +635,21 @@ onMounted(() => {
   min-height: 40px;
   padding-inline: 14px;
   color: var(--text-soft);
-  background: rgba(16, 28, 45, 0.86);
-  border-color: rgba(144, 173, 214, 0.16);
+  background: var(--tag-manager-chip-bg);
+  border-color: var(--tag-manager-chip-border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .tag-chip-list :deep(.el-tag.el-tag--primary) {
-  color: rgba(151, 213, 255, 0.9);
-  background: rgba(18, 39, 61, 0.92);
-  border-color: rgba(111, 183, 255, 0.22);
+  color: var(--tag-manager-chip-primary-text);
+  background: var(--tag-manager-chip-primary-bg);
+  border-color: var(--tag-manager-chip-primary-border);
 }
 
 .tag-chip-list :deep(.el-tag.el-tag--info) {
-  color: rgba(224, 233, 247, 0.8);
-  background: rgba(21, 32, 48, 0.92);
-  border-color: rgba(144, 173, 214, 0.18);
+  color: var(--tag-manager-chip-info-text);
+  background: var(--tag-manager-chip-info-bg);
+  border-color: var(--tag-manager-chip-info-border);
 }
 
 .tag-chip-list :deep(.el-tag__close) {
@@ -629,13 +659,13 @@ onMounted(() => {
 
 .tag-chip-list :deep(.el-tag__close:hover) {
   color: var(--text-strong);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--button-text-hover-bg);
 }
 
 .tag-chip-empty {
   padding: 14px 16px;
-  background: rgba(11, 20, 35, 0.78);
-  border: 1px dashed rgba(144, 173, 214, 0.22);
+  background: var(--tag-manager-empty-bg);
+  border: 1px dashed var(--tag-manager-empty-border);
   border-radius: 16px;
   font-size: 13px;
 }
@@ -660,13 +690,13 @@ onMounted(() => {
   gap: 8px;
   padding: 16px;
   background: var(--surface-card-soft);
-  border: 1px solid rgba(144, 173, 214, 0.12);
+  border: 1px solid var(--panel-soft-border);
   border-radius: 18px;
 }
 
 .strategy-option--active {
-  border-color: rgba(111, 183, 255, 0.3);
-  box-shadow: 0 0 0 1px rgba(111, 183, 255, 0.18) inset;
+  border-color: var(--notice-info-border);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--notice-info-border) 65%, transparent) inset;
 }
 
 .strategy-option p {
@@ -681,7 +711,7 @@ onMounted(() => {
   min-height: 46px;
   padding: 0 14px;
   background: var(--surface-card-soft);
-  border: 1px solid rgba(144, 173, 214, 0.12);
+  border: 1px solid var(--panel-soft-border);
   border-radius: 18px;
 }
 
@@ -697,7 +727,7 @@ onMounted(() => {
   gap: 4px;
   padding: 14px 16px;
   background: var(--surface-card-soft);
-  border: 1px solid rgba(144, 173, 214, 0.12);
+  border: 1px solid var(--panel-soft-border);
   border-radius: 18px;
 }
 
@@ -707,8 +737,8 @@ onMounted(() => {
 }
 
 .settings-readonly--danger {
-  border-color: rgba(255, 125, 125, 0.2);
-  background: linear-gradient(180deg, rgba(64, 20, 24, 0.4), rgba(26, 13, 18, 0.66));
+  border-color: var(--danger-panel-border);
+  background: var(--danger-panel-bg);
 }
 
 .maintenance-actions {
@@ -719,16 +749,16 @@ onMounted(() => {
 }
 
 .maintenance-reset {
-  color: #ffd7d7;
-  background: linear-gradient(180deg, rgba(88, 24, 31, 0.76), rgba(60, 18, 24, 0.84));
-  border-color: rgba(255, 127, 127, 0.28);
+  color: var(--danger-button-text);
+  background: var(--danger-button-bg);
+  border-color: var(--danger-button-border);
 }
 
 .maintenance-reset:hover,
 .maintenance-reset:focus-visible {
-  color: #fff1f1;
-  border-color: rgba(255, 148, 148, 0.4);
-  background: linear-gradient(180deg, rgba(112, 31, 39, 0.82), rgba(72, 22, 29, 0.88));
+  color: var(--text-strong);
+  border-color: var(--danger-button-hover-border);
+  background: var(--danger-button-hover-bg);
 }
 
 .settings-actions {
@@ -740,10 +770,10 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: rgba(8, 15, 27, 0.9);
+  background: var(--action-bar-bg);
   border: 1px solid var(--surface-line);
   border-radius: 22px;
-  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.34);
+  box-shadow: var(--elevation-card);
   backdrop-filter: blur(14px);
 }
 
@@ -760,15 +790,16 @@ onMounted(() => {
 }
 
 .settings-submit {
+  color: var(--action-primary-text);
   border: none;
-  background: linear-gradient(135deg, #4996db, #63b6ff);
-  box-shadow: 0 18px 34px rgba(40, 101, 161, 0.34);
+  background: var(--action-primary-bg);
+  box-shadow: var(--action-primary-shadow);
 }
 
 .settings-submit:hover,
 .settings-submit:focus-visible {
   transform: translateY(-1px);
-  box-shadow: 0 22px 40px rgba(40, 101, 161, 0.4);
+  box-shadow: var(--action-primary-shadow-hover);
 }
 
 .settings-form :deep(.el-input__wrapper),
@@ -803,6 +834,15 @@ onMounted(() => {
 }
 
 @media (max-width: 1080px) {
+  .settings-hero {
+    padding-right: 30px;
+  }
+
+  .settings-hero::before {
+    width: 180px;
+    opacity: 0.28;
+  }
+
   .settings-grid,
   .settings-inline-grid,
   .settings-inline-grid--triple,

@@ -54,10 +54,10 @@ onMounted(load)
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: rgba(8, 15, 27, 0.82);
+  background: var(--toolbar-surface);
   border: 1px solid var(--surface-line);
   border-radius: 22px;
-  box-shadow: 0 20px 40px rgba(2, 7, 15, 0.28);
+  box-shadow: var(--elevation-card-soft);
   backdrop-filter: blur(18px);
 }
 

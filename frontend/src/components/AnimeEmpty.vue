@@ -29,10 +29,10 @@ const emit = defineEmits<{
   justify-items: center;
   padding: 32px 28px;
   text-align: center;
-  background: rgba(7, 14, 26, 0.82);
+  background: var(--surface-card);
   border: 1px solid var(--surface-line);
   border-radius: 28px;
-  box-shadow: 0 24px 46px rgba(3, 8, 15, 0.34);
+  box-shadow: var(--elevation-card);
 }
 
 .anime-empty-state__eyebrow,

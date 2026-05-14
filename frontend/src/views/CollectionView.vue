@@ -241,18 +241,48 @@ onMounted(load)
 }
 
 .collection-hero {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   align-items: flex-end;
   justify-content: space-between;
-  padding: 28px 30px;
-  background:
-    radial-gradient(circle at top right, rgba(72, 139, 203, 0.24), transparent 30%),
-    linear-gradient(135deg, rgba(13, 24, 41, 0.98), rgba(8, 16, 28, 0.94));
+  padding: 28px clamp(220px, 32vw, 340px) 28px 30px;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--hero-surface);
   border: 1px solid var(--surface-line);
   border-radius: 28px;
-  box-shadow: 0 24px 60px rgba(2, 7, 15, 0.32);
+  box-shadow: var(--elevation-hero);
+}
+
+.collection-hero::before {
+  position: absolute;
+  inset: 16px 12px 12px auto;
+  width: min(38%, 260px);
+  background-image: var(--hero-library-image);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: right center;
+  content: '';
+  pointer-events: none;
+  opacity: 0.94;
+  z-index: 0;
+}
+
+.collection-hero::after {
+  position: absolute;
+  inset: auto -6% -36% auto;
+  width: 280px;
+  height: 280px;
+  background: var(--hero-art-glow);
+  content: '';
+  pointer-events: none;
+}
+
+.collection-hero > * {
+  position: relative;
+  z-index: 1;
 }
 
 .collection-eyebrow {
@@ -285,10 +315,10 @@ onMounted(load)
   display: inline-flex;
   gap: 8px;
   padding: 6px;
-  background: rgba(11, 20, 35, 0.82);
+  background: var(--surface-panel-strong);
   border: 1px solid var(--surface-line);
   border-radius: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .layout-switch-buttons :deep(.el-button) {
@@ -368,7 +398,7 @@ onMounted(load)
   background: var(--surface-card);
   border: 1px solid var(--surface-line);
   border-radius: 24px;
-  box-shadow: 0 24px 48px rgba(2, 7, 15, 0.3);
+  box-shadow: var(--elevation-card);
 }
 
 .collection-entry--list {
@@ -392,7 +422,7 @@ onMounted(load)
   overflow: hidden;
   border-radius: 18px;
   aspect-ratio: 4 / 5;
-  background: linear-gradient(135deg, rgba(32, 53, 82, 0.94), rgba(8, 18, 31, 0.98));
+  background: var(--poster-card-bg);
 }
 
 .entry-poster img,
@@ -410,7 +440,7 @@ onMounted(load)
   display: grid;
   place-items: center;
   color: #ffffff;
-  background: linear-gradient(135deg, #5dacf4, #183252);
+  background: var(--poster-fallback-gradient);
   font-size: 26px;
   font-weight: 800;
 }
@@ -491,6 +521,15 @@ onMounted(load)
 }
 
 @media (max-width: 960px) {
+  .collection-hero {
+    padding-right: 30px;
+  }
+
+  .collection-hero::before {
+    width: 180px;
+    opacity: 0.28;
+  }
+
   .collection-entry--list {
     grid-template-columns: 1fr;
   }

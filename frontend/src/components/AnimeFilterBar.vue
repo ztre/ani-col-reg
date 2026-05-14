@@ -246,7 +246,7 @@ function selectSeason(value?: number) {
   min-height: 48px;
   padding-inline: 12px;
   color: var(--text-soft);
-  background: rgba(17, 28, 45, 0.72);
+  background: var(--control-subtle-bg);
   border: 1px solid var(--surface-line);
   border-radius: 16px;
 }
@@ -254,8 +254,8 @@ function selectSeason(value?: number) {
 .filter-reset {
   min-height: 48px;
   color: var(--text-muted);
-  background: rgba(12, 21, 36, 0.68);
-  border: 1px solid rgba(169, 193, 226, 0.12);
+  background: var(--button-text-bg);
+  border: 1px solid var(--control-subtle-border);
   border-radius: 16px;
 }
 
@@ -286,13 +286,13 @@ function selectSeason(value?: number) {
 
 .season-filter-chip:hover {
   color: var(--text-strong);
-  background: rgba(18, 31, 50, 0.92);
+  background: var(--control-subtle-hover-bg);
 }
 
 .season-filter-chip--active {
-  color: #04101d;
+  color: var(--shell-nav-active-text);
   background: var(--accent-gradient);
-  border-color: rgba(173, 223, 255, 0.42);
+  border-color: var(--shell-nav-active-border);
   box-shadow: var(--accent-shadow);
 }
 
@@ -315,8 +315,8 @@ function selectSeason(value?: number) {
 }
 
 .anime-filter-bar :deep(.el-tag.el-tag--info) {
-  background: rgba(24, 38, 59, 0.92);
-  border-color: rgba(169, 193, 226, 0.16);
+  background: var(--surface-chip);
+  border-color: var(--surface-line);
 }
 
 .anime-filter-bar :deep(.el-button),
@@ -327,7 +327,7 @@ function selectSeason(value?: number) {
 .anime-filter-bar__actions :deep(.el-button--primary) {
   min-height: 48px;
   padding-inline: 18px;
-  color: #06101d;
+  color: var(--shell-nav-active-text);
   background: var(--accent-gradient);
   border-color: transparent;
   box-shadow: var(--accent-shadow);

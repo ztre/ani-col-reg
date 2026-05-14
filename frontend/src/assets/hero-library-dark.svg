@@ -1,0 +1,86 @@
+<svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="libraryDarkNotebook" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#17243A"/>
+      <stop offset="100%" stop-color="#223152"/>
+    </linearGradient>
+    <linearGradient id="libraryDarkPanel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0E1830" stop-opacity="0.96"/>
+      <stop offset="100%" stop-color="#18284A" stop-opacity="0.98"/>
+    </linearGradient>
+    <linearGradient id="libraryDarkAccent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF92BF"/>
+      <stop offset="52%" stop-color="#7AB7FF"/>
+      <stop offset="100%" stop-color="#77E1C6"/>
+    </linearGradient>
+    <radialGradient id="libraryDarkHalo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(374 162) rotate(90) scale(172 186)">
+      <stop stop-color="#6D9EFF" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#6D9EFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="libraryDarkShadow" x="0" y="0" width="640" height="420" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="26" stdDeviation="22" flood-color="#020814" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+
+  <circle cx="374" cy="164" r="168" fill="url(#libraryDarkHalo)"/>
+  <circle cx="500" cy="94" r="66" fill="#1D2C4B" fill-opacity="0.42"/>
+  <circle cx="154" cy="334" r="78" fill="#17304B" fill-opacity="0.38"/>
+
+  <g filter="url(#libraryDarkShadow)">
+    <g transform="translate(72 62) rotate(-6 78 72)">
+      <rect x="0" y="0" width="156" height="144" rx="28" fill="url(#libraryDarkNotebook)"/>
+      <rect x="20" y="18" width="10" height="78" rx="5" fill="#8B78C5" fill-opacity="0.7"/>
+      <rect x="44" y="30" width="74" height="10" rx="5" fill="#98BFFF" fill-opacity="0.9"/>
+      <rect x="44" y="48" width="92" height="10" rx="5" fill="#98BFFF" fill-opacity="0.82"/>
+      <rect x="44" y="74" width="84" height="9" rx="4.5" fill="#DCCEFF" fill-opacity="0.18"/>
+      <rect x="44" y="90" width="62" height="9" rx="4.5" fill="#DCCEFF" fill-opacity="0.14"/>
+      <path d="M90 116H140C144.418 116 148 119.582 148 124V136H90V116Z" fill="#FF88BA" fill-opacity="0.9"/>
+      <path d="M129.5 16L134.845 26.2926L146 27.9167L138 35.7167L139.889 46.8333L129.5 41.6417L119.111 46.8333L121 35.7167L113 27.9167L124.155 26.2926L129.5 16Z" fill="#FFD06B"/>
+    </g>
+
+    <g transform="translate(196 120)">
+      <rect x="0" y="0" width="272" height="188" rx="34" fill="#0C1730" fill-opacity="0.98"/>
+      <rect x="14" y="14" width="244" height="160" rx="26" fill="url(#libraryDarkPanel)"/>
+      <rect x="32" y="36" width="86" height="50" rx="16" fill="url(#libraryDarkAccent)" fill-opacity="0.76"/>
+      <rect x="132" y="38" width="88" height="12" rx="6" fill="#F5F8FF" fill-opacity="0.9"/>
+      <rect x="132" y="58" width="108" height="8" rx="4" fill="#C0CFEE" fill-opacity="0.34"/>
+      <rect x="132" y="76" width="76" height="8" rx="4" fill="#C0CFEE" fill-opacity="0.24"/>
+      <rect x="32" y="100" width="86" height="50" rx="16" fill="#213D67"/>
+      <rect x="132" y="102" width="88" height="12" rx="6" fill="#F5F8FF" fill-opacity="0.9"/>
+      <rect x="132" y="122" width="116" height="8" rx="4" fill="#C0CFEE" fill-opacity="0.34"/>
+      <rect x="132" y="140" width="64" height="8" rx="4" fill="#C0CFEE" fill-opacity="0.24"/>
+      <rect x="32" y="166" width="26" height="8" rx="4" fill="#FF88BA" fill-opacity="0.84"/>
+      <rect x="64" y="166" width="84" height="8" rx="4" fill="#77E1C6" fill-opacity="0.84"/>
+      <circle cx="226" cy="48" r="12" fill="#FFD06B"/>
+      <path d="M222 48L225.5 51.5L231 44" stroke="#081020" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <g transform="translate(490 110) rotate(8 60 74)">
+      <rect x="0" y="0" width="120" height="148" rx="28" fill="#121E39" fill-opacity="0.96"/>
+      <rect x="22" y="26" width="42" height="42" rx="14" fill="#FF88BA" fill-opacity="0.88"/>
+      <path d="M34 48H52" stroke="#F9FBFF" stroke-width="4" stroke-linecap="round"/>
+      <rect x="76" y="28" width="26" height="8" rx="4" fill="#DCCEFF" fill-opacity="0.28"/>
+      <rect x="76" y="42" width="20" height="8" rx="4" fill="#DCCEFF" fill-opacity="0.18"/>
+      <rect x="26" y="92" width="12" height="28" rx="6" fill="#FF88BA"/>
+      <rect x="46" y="80" width="12" height="40" rx="6" fill="#7AB7FF"/>
+      <rect x="66" y="70" width="12" height="50" rx="6" fill="#77E1C6"/>
+      <rect x="86" y="60" width="12" height="60" rx="6" fill="#FFD06B"/>
+    </g>
+
+    <g transform="translate(512 274)">
+      <circle cx="58" cy="58" r="56" stroke="#DCE9FF" stroke-opacity="0.38" stroke-width="4" stroke-dasharray="8 10"/>
+      <circle cx="58" cy="58" r="38" fill="#F7FAFF" fill-opacity="0.08"/>
+      <path d="M81 58C81 70.7025 70.7025 81 58 81C50.1983 81 43.3043 77.1159 39.1423 71.1749" stroke="#8FBFFF" stroke-width="8" stroke-linecap="round"/>
+      <path d="M32 58C32 45.2975 42.2975 35 55 35C62.8017 35 69.6957 38.8841 73.8577 44.8251" stroke="#FF92BF" stroke-width="8" stroke-linecap="round"/>
+      <path d="M38 72L39.5 63L47.5 67.5" fill="#8FBFFF"/>
+      <path d="M78 44L76.5 53L68.5 48.5" fill="#FF92BF"/>
+    </g>
+  </g>
+
+  <g fill="#FF9FC5" fill-opacity="0.7">
+    <ellipse cx="30" cy="176" rx="10" ry="5" transform="rotate(-24 30 176)"/>
+    <ellipse cx="522" cy="20" rx="11" ry="5.5" transform="rotate(-18 522 20)"/>
+    <ellipse cx="610" cy="182" rx="12" ry="6" transform="rotate(-36 610 182)"/>
+    <ellipse cx="94" cy="390" rx="12" ry="5" transform="rotate(18 94 390)"/>
+  </g>
+</svg>

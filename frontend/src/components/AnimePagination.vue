@@ -50,10 +50,10 @@ function handlePageSizeUpdate(value: number) {
 
 .anime-pagination :deep(.el-pagination) {
   padding: 12px 16px;
-  background: rgba(7, 14, 26, 0.76);
-  border: 1px solid rgba(141, 170, 212, 0.14);
+  background: var(--pagination-surface);
+  border: 1px solid var(--pagination-border);
   border-radius: 24px;
-  box-shadow: 0 18px 34px rgba(3, 8, 15, 0.3);
+  box-shadow: var(--elevation-floating);
 }
 
 .anime-pagination :deep(.btn-prev),
@@ -67,13 +67,13 @@ function handlePageSizeUpdate(value: number) {
 .anime-pagination :deep(.btn-prev),
 .anime-pagination :deep(.btn-next),
 .anime-pagination :deep(.el-pager li) {
-  background: rgba(18, 29, 47, 0.62);
+  background: var(--pagination-button-bg);
   border-radius: 12px;
 }
 
 .anime-pagination :deep(.el-select__wrapper) {
   min-height: 36px;
-  background: rgba(18, 29, 47, 0.82);
+  background: var(--pagination-button-bg-strong);
   box-shadow: 0 0 0 1px var(--surface-line) inset;
   border-radius: 14px;
 }
@@ -84,8 +84,8 @@ function handlePageSizeUpdate(value: number) {
 }
 
 .anime-pagination :deep(.el-pager li.is-active) {
-  color: #07121f;
-  background: linear-gradient(135deg, #8fd7ff, #6fb7ff);
+  color: var(--shell-nav-active-text);
+  background: var(--accent-gradient);
 }
 
 @media (max-width: 768px) {
