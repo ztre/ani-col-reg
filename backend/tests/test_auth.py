@@ -122,7 +122,7 @@ def test_settings_include_sync_defaults_and_cover_cache_actions(tmp_path, monkey
         db=db,
     )
     assert updated.anime_source == "mikan"
-    assert updated.sync_strategy == "replace-season"
+    assert updated.sync_strategy == "incremental"
     assert updated.default_filter_collected is True
     assert updated.default_filter_release_tag == "BDRip"
     assert updated.cover_cache_file_count == 0

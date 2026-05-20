@@ -69,6 +69,9 @@ class AppSettingsStore:
         with self.path.open("r", encoding="utf-8") as handle:
             payload = json.load(handle)
         stored = StoredAppSettings.model_validate(payload)
+        if stored.sync_strategy != "incremental":
+            stored.sync_strategy = "incremental"
+            self._save(stored)
         return stored
 
     def authenticate(self, username: str, password: str) -> StoredAppSettings | None:
@@ -108,9 +111,10 @@ class AppSettingsStore:
 
         if "sync_strategy" in values:
             sync_strategy = values["sync_strategy"]
-            if sync_strategy not in SYNC_STRATEGIES:
+            if sync_strategy is not None and sync_strategy not in SYNC_STRATEGIES:
                 raise ValueError("不支持的同步策略")
-            stored.sync_strategy = sync_strategy
+
+        stored.sync_strategy = "incremental"
 
         if "admin_username" in values:
             admin_username = (values.get("admin_username") or "").strip()

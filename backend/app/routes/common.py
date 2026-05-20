@@ -287,13 +287,7 @@ def json_array_contains(column, candidate: str):
 
 
 def resolve_sync_mode(stored_sync_strategy: str, payload: AnimeSearchRequest) -> str:
-    if stored_sync_strategy != 'replace-season':
-        return stored_sync_strategy
-    if payload.keyword:
-        return 'incremental'
-    if payload.season is None:
-        return 'incremental'
-    return 'replace-season'
+    return 'incremental'
 
 
 def normalize_query_text_values(values: list[str] | str | None) -> list[str]:

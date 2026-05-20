@@ -342,7 +342,7 @@ def test_search_anime_uses_selected_mikan_source(monkeypatch, tmp_path) -> None:
     assert page.items[0].cover_url == "/api/covers/mikan-681.jpg"
 
 
-def test_search_anime_replace_season_falls_back_to_incremental_for_full_year(monkeypatch) -> None:
+def test_search_anime_uses_incremental_sync_for_full_year(monkeypatch) -> None:
     db = make_session()
     captured: dict[str, object] = {}
 
@@ -378,7 +378,7 @@ def test_search_anime_replace_season_falls_back_to_incremental_for_full_year(mon
     assert captured["sync_scopes"] is None
 
 
-def test_search_anime_replace_season_keeps_single_season_prune(monkeypatch) -> None:
+def test_search_anime_uses_incremental_sync_for_single_season(monkeypatch) -> None:
     db = make_session()
     captured: dict[str, object] = {}
 
@@ -410,8 +410,8 @@ def test_search_anime_replace_season_keeps_single_season_prune(monkeypatch) -> N
     page = asyncio.run(search_anime(AnimeSearchRequest(year=2026, season=2), db))
 
     assert page.total == 0
-    assert captured["mode"] == "replace-season"
-    assert captured["sync_scopes"] == [(2026, 2)]
+    assert captured["mode"] == "incremental"
+    assert captured["sync_scopes"] is None
 
 
 def test_get_anime_hydrates_missing_detail_fields(monkeypatch) -> None:

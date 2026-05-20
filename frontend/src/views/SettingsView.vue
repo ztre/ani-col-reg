@@ -4,7 +4,7 @@
       <div>
         <p class="settings-eyebrow">Settings</p>
         <h1>系统配置中心</h1>
-        <p>集中管理数据源、同步方式、封面缓存和管理员账号，避免在不同页面来回切换。</p>
+        <p>集中管理数据源、封面缓存、标签复用和管理员账号，避免在不同页面来回切换。</p>
       </div>
       <el-button class="settings-refresh" :icon="RefreshRight" @click="load">重新获取</el-button>
     </header>
@@ -37,22 +37,47 @@
 
       <section class="settings-card">
         <div class="settings-card-copy">
-          <p class="settings-label">Sync</p>
-          <h2>源站同步策略</h2>
-          <p>决定“搜索并更新”后，库里旧条目是继续保留，还是按源站的单季度结果收口。带关键词搜索，或没有明确选中单季度时，都会按增量同步处理。</p>
+          <p class="settings-label">Maintenance</p>
+          <h2>缓存与数据维护</h2>
+          <p>这里可以清理本地封面缓存，或重置收藏管理里的本地收藏记录。重置收藏只会删除整理状态、标签和备注，不会移除番剧库条目和封面文件。</p>
         </div>
 
-        <el-radio-group v-model="form.sync_strategy" class="sync-strategy-group">
-          <label class="strategy-option" :class="{ 'strategy-option--active': form.sync_strategy === 'incremental' }">
-            <el-radio value="incremental">增量同步</el-radio>
-            <p>以保留现有库内容为主，只补充或更新这次抓到的条目，不主动删除旧数据。适合日常搜索、关键词检索、全年范围刷新，以及需要先人工确认的场景。</p>
-          </label>
+        <div class="maintenance-metrics">
+          <div class="metric-card">
+            <span>收藏记录数</span>
+            <strong>{{ settingsSnapshot?.collection_count ?? 0 }}</strong>
+          </div>
 
-          <label class="strategy-option" :class="{ 'strategy-option--active': form.sync_strategy === 'replace-season' }">
-            <el-radio value="replace-season">单季度对齐</el-radio>
-            <p>只在“无关键词 + 明确单季度”时生效，会以该季度的源站结果为准：新条目补入、已有条目更新、已不在结果中的未收藏旧条目移除；已收藏内容仍会保留。若选择全年或带关键词，会自动回退为增量同步。</p>
-          </label>
-        </el-radio-group>
+          <div class="metric-card">
+            <span>缓存文件数</span>
+            <strong>{{ settingsSnapshot?.cover_cache_file_count ?? 0 }}</strong>
+          </div>
+
+          <div class="metric-card">
+            <span>缓存体积</span>
+            <strong>{{ coverCacheSizeLabel }}</strong>
+          </div>
+        </div>
+
+        <div class="settings-readonly">
+          <span>当前使用数据源</span>
+          <strong>{{ activeSourceLabel }}</strong>
+        </div>
+
+        <div class="settings-readonly">
+          <span>最近一次保存</span>
+          <strong>{{ updatedAtLabel }}</strong>
+        </div>
+
+        <div class="settings-readonly settings-readonly--danger">
+          <span>数据重置范围</span>
+          <strong>仅清理收藏记录，不删除番剧库</strong>
+        </div>
+
+        <div class="maintenance-actions">
+          <el-button :loading="clearingCache" @click="clearCache">清理封面缓存</el-button>
+          <el-button class="maintenance-reset" :loading="resettingCollectionData" @click="resetCollectionData">重置收藏数据</el-button>
+        </div>
       </section>
 
       <section class="settings-card settings-card--wide">
@@ -107,71 +132,47 @@
         </div>
       </section>
 
-      <section class="settings-card">
-        <div class="settings-card-copy">
-          <p class="settings-label">Maintenance</p>
-          <h2>缓存与数据维护</h2>
-          <p>这里可以清理本地封面缓存，或重置收藏管理里的本地收藏记录。重置收藏只会删除整理状态、标签和备注，不会移除番剧库条目和封面文件。</p>
-        </div>
-
-        <div class="maintenance-metrics">
-          <div class="metric-card">
-            <span>收藏记录数</span>
-            <strong>{{ settingsSnapshot?.collection_count ?? 0 }}</strong>
-          </div>
-
-          <div class="metric-card">
-            <span>缓存文件数</span>
-            <strong>{{ settingsSnapshot?.cover_cache_file_count ?? 0 }}</strong>
-          </div>
-
-          <div class="metric-card">
-            <span>缓存体积</span>
-            <strong>{{ coverCacheSizeLabel }}</strong>
-          </div>
-        </div>
-
-        <div class="settings-readonly">
-          <span>当前使用数据源</span>
-          <strong>{{ activeSourceLabel }}</strong>
-        </div>
-
-        <div class="settings-readonly">
-          <span>最近一次保存</span>
-          <strong>{{ updatedAtLabel }}</strong>
-        </div>
-
-        <div class="settings-readonly settings-readonly--danger">
-          <span>数据重置范围</span>
-          <strong>仅清理收藏记录，不删除番剧库</strong>
-        </div>
-
-        <div class="maintenance-actions">
-          <el-button :loading="clearingCache" @click="clearCache">清理封面缓存</el-button>
-          <el-button class="maintenance-reset" :loading="resettingCollectionData" @click="resetCollectionData">重置收藏数据</el-button>
-        </div>
-      </section>
-
-      <section class="settings-card">
+      <section class="settings-card settings-card--wide settings-card--security">
         <div class="settings-card-copy">
           <p class="settings-label">Security</p>
           <h2>登录与账号</h2>
           <p>修改管理员账号或密码后会立即要求重新登录，避免旧登录态继续使用过期凭据。</p>
         </div>
 
-        <el-form label-position="top" class="settings-form">
-          <el-form-item label="管理员账号">
-            <el-input v-model="form.admin_username" size="large" />
-          </el-form-item>
+        <div class="settings-account-stack">
+          <div class="settings-account-summary">
+            <div class="settings-readonly settings-account-summary-card">
+              <span>当前管理员</span>
+              <strong>{{ currentAdminUsername }}</strong>
+            </div>
 
-          <el-form-item label="当前密码">
-            <el-input v-model="form.current_password" size="large" show-password placeholder="仅在修改密码时填写" />
-          </el-form-item>
+            <div class="settings-readonly settings-account-summary-card" :class="{ 'settings-readonly--danger': settingsSnapshot?.requires_password_change }">
+              <span>密码状态</span>
+              <strong>{{ passwordStatusLabel }}</strong>
+            </div>
 
-          <el-form-item label="新密码">
-            <el-input v-model="form.new_password" size="large" show-password placeholder="至少 6 位，留空则不修改" />
-          </el-form-item>
-        </el-form>
+            <div class="settings-account-note">
+              <p class="settings-account-note-label">更新规则</p>
+              <p>仅修改账号名可直接保存；修改密码时需要填写当前密码，新密码至少 6 位。保存后若账号或密码有变化，会立即跳回登录页。</p>
+            </div>
+          </div>
+
+          <el-form label-position="top" class="settings-form settings-form--security">
+            <div class="settings-account-fields">
+              <el-form-item label="管理员账号">
+                <el-input v-model="form.admin_username" size="large" />
+              </el-form-item>
+
+              <el-form-item label="当前密码">
+                <el-input v-model="form.current_password" size="large" show-password placeholder="仅在修改密码时填写" />
+              </el-form-item>
+
+              <el-form-item label="新密码" class="settings-account-field--wide">
+                <el-input v-model="form.new_password" size="large" show-password placeholder="至少 6 位，留空则不修改" />
+              </el-form-item>
+            </div>
+          </el-form>
+        </div>
       </section>
     </div>
 
@@ -215,7 +216,6 @@ const releaseTagDraft = ref('')
 const groupTagDraft = ref('')
 const form = reactive({
   anime_source: 'youranimes' as AppSettings['anime_source'],
-  sync_strategy: 'incremental' as AppSettings['sync_strategy'],
   admin_username: 'admin',
   current_password: '',
   new_password: ''
@@ -230,6 +230,10 @@ const updatedAtLabel = computed(() => {
   if (!settingsSnapshot.value?.updated_at) return '-'
   return new Date(settingsSnapshot.value.updated_at).toLocaleString()
 })
+const passwordStatusLabel = computed(() => {
+  if (!settingsSnapshot.value) return '-'
+  return settingsSnapshot.value.requires_password_change ? '仍在使用默认密码' : '已启用自定义密码'
+})
 const coverCacheSizeLabel = computed(() => formatBytes(settingsSnapshot.value?.cover_cache_total_bytes || 0))
 const tagLibraryLabels: Record<TagLibraryKind, string> = {
   release: '资源标签',
@@ -240,7 +244,6 @@ function applySnapshot(settings: AppSettings) {
   settingsSnapshot.value = settings
   currentAdminUsername.value = settings.admin_username
   form.anime_source = settings.anime_source
-  form.sync_strategy = settings.sync_strategy
   form.admin_username = settings.admin_username
   form.current_password = ''
   form.new_password = ''
@@ -410,7 +413,6 @@ async function submit() {
     const requireRelogin = Boolean(form.new_password) || form.admin_username !== previousUsername
     const settings = await updateSettings({
       anime_source: form.anime_source,
-      sync_strategy: form.sync_strategy,
       admin_username: form.admin_username,
       current_password: form.current_password || undefined,
       new_password: form.new_password || undefined
@@ -548,6 +550,10 @@ onMounted(() => {
   display: grid;
 }
 
+.settings-form--security {
+  gap: 2px;
+}
+
 .tag-manager-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -678,6 +684,62 @@ onMounted(() => {
 
 .settings-inline-grid--triple {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settings-account-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.settings-account-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.settings-account-summary-card {
+  min-height: 96px;
+  align-content: center;
+}
+
+.settings-account-note {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 6px;
+  padding: 16px 18px;
+  background: var(--surface-card-soft);
+  border: 1px solid var(--panel-soft-border);
+  border-radius: 18px;
+}
+
+.settings-account-note-label,
+.settings-account-note p {
+  margin: 0;
+}
+
+.settings-account-note-label {
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settings-account-note p {
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.settings-account-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.settings-account-field--wide {
+  grid-column: 1 / -1;
+}
+
+.settings-account-fields :deep(.el-form-item) {
+  margin-bottom: 0;
 }
 
 .sync-strategy-group {
@@ -846,6 +908,8 @@ onMounted(() => {
   .settings-grid,
   .settings-inline-grid,
   .settings-inline-grid--triple,
+  .settings-account-summary,
+  .settings-account-fields,
   .maintenance-metrics,
   .tag-manager-grid {
     grid-template-columns: 1fr;
