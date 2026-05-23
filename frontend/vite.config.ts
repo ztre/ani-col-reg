@@ -7,7 +7,7 @@ const envDir = fileURLToPath(new URL('..', import.meta.url))
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, envDir, '')
-  const backendPort = Number(env.ANI_COL_PORT || '8060')
+  const backendPort = Number(env.ANI_COL_PORT || '8001')
   const devServerPort = Number(env.VITE_DEV_SERVER_PORT || '5173')
   const apiTarget = env.VITE_API_BASE_URL || `http://localhost:${backendPort}`
 

@@ -19,9 +19,9 @@ docker compose up --build
 
 启动后可以访问：
 
-- App: `http://localhost:8060`
-- Health check: `http://localhost:8060/health`
-- API docs: `http://localhost:8060/docs`
+- App: `http://localhost:8001`
+- Health check: `http://localhost:8001/health`
+- API docs: `http://localhost:8001/docs`
 
 容器运行数据会保存在 `${ANI_COL_ROOT_DIR}/data`，并挂载到容器内的 `/app/data`。
 
@@ -35,9 +35,9 @@ cp .env.example .env
 
 默认本地端口：
 
-- Backend: `http://localhost:8060`
+- Backend: `http://localhost:8001`
 - Frontend dev server: `http://localhost:5173`
-- Vite proxy target: `http://localhost:8060`
+- Vite proxy target: `http://localhost:8001`
 
 根目录 `.env` 中与 Docker 相关的常用字段：
 

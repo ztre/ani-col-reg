@@ -35,7 +35,7 @@ COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && mkdir -p /app/data/covers
 
-EXPOSE 8060
+EXPOSE 8001
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["python", "run.py"]

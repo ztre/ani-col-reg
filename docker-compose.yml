@@ -12,15 +12,15 @@ services:
       - path: ${ANI_COL_ENV_FILE:-./runtime/.env}
         required: false
     environment:
-      - ANI_COL_PORT=${ANI_COL_PORT:-8060}
+      - ANI_COL_PORT=${ANI_COL_PORT:-8001}
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
     volumes:
       - ${ANI_COL_ROOT_DIR:-./runtime}/data:/app/data
     ports:
-      - "${ANI_COL_PORT:-8060}:${ANI_COL_PORT:-8060}"
+      - "${ANI_COL_PORT:-8001}:${ANI_COL_PORT:-8001}"
     healthcheck:
-      test: ["CMD", "python", "-c", "import os, urllib.request; port = os.getenv('ANI_COL_PORT', '8060'); urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=3).read()"]
+      test: ["CMD", "python", "-c", "import os, urllib.request; port = os.getenv('ANI_COL_PORT', '8001'); urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=3).read()"]
       interval: 30s
       timeout: 5s
       retries: 3

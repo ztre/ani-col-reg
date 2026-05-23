@@ -15,7 +15,7 @@ def _load_shared_env() -> None:
 def main() -> None:
     _load_shared_env()
     host = os.getenv("ANI_COL_HOST", "0.0.0.0")
-    port = int(os.getenv("ANI_COL_PORT", "8060"))
+    port = int(os.getenv("ANI_COL_PORT", "8001"))
     reload = os.getenv("ANI_COL_RELOAD", "false").lower() in {"1", "true", "yes", "on"}
 
     uvicorn.run("app.main:app", host=host, port=port, reload=reload)
