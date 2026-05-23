@@ -1,21 +1,22 @@
-FROM node:22-alpine AS frontend-build
+ARG NODE_VERSION=22
+ARG PYTHON_VERSION=3.13
+
+FROM node:${NODE_VERSION}-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
 RUN npm ci
 
-COPY frontend ./
+COPY frontend/ ./
 RUN npm run build
 
 
-FROM python:3.13-slim AS runtime
+FROM python:${PYTHON_VERSION}-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    ANI_COL_PORT=8060 \
-    PUID=1000 \
-    PGID=1000
+    PYTHONPATH=/app
 
 WORKDIR /app
 
@@ -28,7 +29,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/app ./app
 COPY backend/run.py ./run.py
-COPY --from=frontend-build /app/frontend/dist ./frontend_dist
+COPY --from=frontend-builder /app/frontend/dist ./frontend_dist
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN chmod +x /usr/local/bin/entrypoint.sh \

@@ -120,7 +120,7 @@ export function splitTagValues(value?: MaybeTagValue) {
         return uniqueTags(parsed.filter((item): item is string => typeof item === 'string'))
       }
     } catch {
-      // Fall through to comma-split legacy data.
+      // 如果不是有效的 JSON 数组，就回退到旧数据使用的逗号分隔解析方式。
     }
   }
 

@@ -61,6 +61,7 @@ import { Grid, MoonNight, Setting, Star, Sunny, SwitchButton, User } from '@elem
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { sourceLabel } from './animePresentation'
 import { useAuthSession } from './auth'
 import { useThemeMode } from './theme'
 
@@ -71,7 +72,7 @@ const { isLight, themeMode, toggleTheme } = useThemeMode()
 
 const isLoginPage = computed(() => route.path === '/login')
 const appName = computed(() => session.state.settings?.app_name || session.state.status?.app_name || '番剧收藏')
-const activeSourceLabel = computed(() => (session.state.settings?.anime_source === 'mikan' ? 'Mikan' : 'YourAnimes'))
+const activeSourceLabel = computed(() => sourceLabel(session.state.settings?.anime_source || 'youranimes'))
 const themeToggleLabel = computed(() => (isLight.value ? '切换为深色' : '切换为浅色'))
 const themeToggleIcon = computed(() => (isLight.value ? MoonNight : Sunny))
 const themeToggleText = computed(() => (themeMode.value === 'light' ? '浅色模式' : '深色模式'))

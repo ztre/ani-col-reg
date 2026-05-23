@@ -93,6 +93,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
+import { posterFallback, seasonLabel, sourceLabel, splitTagValues } from '../animePresentation'
 import { collectionStageLabel, collectionStatusTone } from '../collectionPresentation'
 import CollectionEditor from './CollectionEditor.vue'
 import type { Anime, CollectionItem } from '../types'
@@ -108,7 +109,7 @@ const emit = defineEmits<{
 }>()
 
 const imageBroken = ref(false)
-const allSourceTags = computed(() => splitTags(props.anime.tags))
+const allSourceTags = computed(() => splitTagValues(props.anime.tags))
 const sourceTags = computed(() => allSourceTags.value.slice(0, 6))
 const showPoster = computed(() => Boolean(props.anime.cover_url && !imageBroken.value))
 
@@ -119,30 +120,6 @@ watch(
   },
   { immediate: true }
 )
-
-function seasonLabel(season: number) {
-  const labels: Record<number, string> = { 1: '1月', 2: '4月', 3: '7月', 4: '10月' }
-  return labels[season] || String(season)
-}
-
-function sourceLabel(source: string) {
-  const labels: Record<string, string> = {
-    youranimes: 'YourAnimes',
-    mikan: 'Mikan'
-  }
-  return labels[source] || source
-}
-
-function splitTags(value?: string | null) {
-  return (value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
-function posterFallback(title: string) {
-  return title.trim().slice(0, 2).toUpperCase() || 'AN'
-}
 </script>
 
 <style scoped>

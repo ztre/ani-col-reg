@@ -6,6 +6,14 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.services.cover_cache import is_known_placeholder_cover_url
+from app.services.html_parsing import (
+    clean_multiline_text as _clean_multiline_text,
+    collapse_whitespace as _collapse_whitespace,
+    find_section_heading as _find_section_heading,
+    first_non_empty as _first_non_empty,
+    meta_content as _meta_content,
+    section_nodes as _section_nodes,
+)
 from app.services.scraper import AnimeSourceRecord, normalize_title
 
 
@@ -302,7 +310,7 @@ def _header2_section_text(soup: BeautifulSoup, labels: list[str]) -> str | None:
                 break
             if not hasattr(sibling, "get_text"):
                 continue
-            section_text = _clean_text(sibling.get_text("\n", strip=True))
+            section_text = _clean_multiline_text(sibling.get_text("\n", strip=True))
             if section_text:
                 content.append(section_text)
 
@@ -360,7 +368,7 @@ def _bangumi_synopsis(soup: BeautifulSoup) -> str | None:
     node = soup.select_one("#subject_summary")
     if node is None:
         return None
-    text = _clean_text(node.get_text("\n", strip=True))
+    text = _clean_multiline_text(node.get_text("\n", strip=True))
     return text or None
 
 
@@ -484,68 +492,15 @@ def _headline_text(soup: BeautifulSoup) -> str | None:
     return None
 
 
-def _meta_content(soup: BeautifulSoup, *, property_name: str | None = None, name: str | None = None) -> str | None:
-    attrs = {}
-    if property_name:
-        attrs["property"] = property_name
-    if name:
-        attrs["name"] = name
-    node = soup.find("meta", attrs=attrs)
-    if node is None:
-        return None
-    content = node.get("content")
-    return content.strip() if content and content.strip() else None
-
-
-def _find_section_heading(soup: BeautifulSoup, labels: list[str]):
-    label_set = {_collapse_whitespace(label) for label in labels}
-    for tag in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "strong", "dt", "p", "span", "div"]):
-        text = _collapse_whitespace(tag.get_text(" ", strip=True))
-        if not text:
-            continue
-        if text in label_set or any(text.startswith(label) for label in label_set):
-            return tag
-    return None
-
-
-def _section_nodes(heading) -> list:
-    nodes = []
-    for sibling in heading.next_siblings:
-        if getattr(sibling, "name", None) in {"h1", "h2", "h3", "h4", "h5", "h6"}:
-            break
-        if hasattr(sibling, "get_text"):
-            nodes.append(sibling)
-
-    if nodes:
-        return nodes
-
-    parent = getattr(heading, "parent", None)
-    if parent is None:
-        return []
-
-    seen_heading = False
-    for child in parent.children:
-        if child is heading:
-            seen_heading = True
-            continue
-        if not seen_heading:
-            continue
-        if getattr(child, "name", None) in {"h1", "h2", "h3", "h4", "h5", "h6"}:
-            break
-        if hasattr(child, "get_text"):
-            nodes.append(child)
-    return nodes
-
-
 def _section_text(soup: BeautifulSoup, labels: list[str]) -> str | None:
     heading = _find_section_heading(soup, labels)
     if heading is None:
         return None
 
     content = "\n".join(
-        _clean_text(node.get_text("\n", strip=True))
+        _clean_multiline_text(node.get_text("\n", strip=True))
         for node in _section_nodes(heading)
-        if _clean_text(node.get_text("\n", strip=True))
+        if _clean_multiline_text(node.get_text("\n", strip=True))
     )
     if content:
         return content
@@ -553,7 +508,7 @@ def _section_text(soup: BeautifulSoup, labels: list[str]) -> str | None:
     parent = getattr(heading, "parent", None)
     if parent is None:
         return None
-    raw = _clean_text(parent.get_text("\n", strip=True))
+    raw = _clean_multiline_text(parent.get_text("\n", strip=True))
     for label in labels:
         if raw.startswith(label):
             raw = raw[len(label) :].strip(" ：:\n")
@@ -573,20 +528,4 @@ def _extract_mikan_date(text: str) -> str | None:
     match = re.search(r"放送开始[:：]\s*([0-9./-]+)", text)
     if match:
         return match.group(1)
-    return None
-
-
-def _clean_text(text: str) -> str:
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    return "\n".join(lines)
-
-
-def _collapse_whitespace(text: str) -> str:
-    return " ".join(text.split())
-
-
-def _first_non_empty(*values: str | None) -> str | None:
-    for value in values:
-        if value and value.strip():
-            return value.strip()
     return None

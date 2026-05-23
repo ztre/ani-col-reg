@@ -72,11 +72,12 @@ import { ElMessageBox } from 'element-plus'
 import { splitTagValues } from '../animePresentation'
 import { ORGANIZE_STATUS_OPTIONS, type CollectionOrganizeStatus } from '../collectionPresentation'
 import { deleteCollection, saveCollection, updateCollection } from '../services/collectionService'
-import { loadManagedTags, rememberManagedTags } from '../services/tagService'
 import {
+  loadTagLibrary as loadManagedTags,
   RELEASE_TAG_GROUP_LABELS,
   mergeTagOptions,
   normalizeReleaseTags,
+  rememberTagLibrary as rememberManagedTags,
   releaseTagGroup,
 } from '../tagLibrary'
 import type { CollectionItem } from '../types'

@@ -286,10 +286,6 @@ def json_array_contains(column, candidate: str):
     )
 
 
-def resolve_sync_mode(stored_sync_strategy: str, payload: AnimeSearchRequest) -> str:
-    return 'incremental'
-
-
 def normalize_query_text_values(values: list[str] | str | None) -> list[str]:
     if values is None:
         return []

@@ -23,13 +23,6 @@ export function collectionStageLabel(collection?: Pick<CollectionItem, 'organize
   return ORGANIZE_STATUS_LABELS[normalizeOrganizeStatus(collection)]
 }
 
-export function collectionActionLabel(collection?: Pick<CollectionItem, 'organize_status'> | null) {
-  if (!collection) {
-    return '加入收藏'
-  }
-  return ORGANIZE_STATUS_LABELS[normalizeOrganizeStatus(collection)]
-}
-
 export function collectionStatusTone(collection?: Pick<CollectionItem, 'organize_status'> | null) {
   if (!collection) {
     return 'library'

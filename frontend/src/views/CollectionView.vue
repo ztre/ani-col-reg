@@ -66,8 +66,8 @@
           <h2>{{ item.title_cn }}</h2>
           <div class="entry-chip-row">
             <el-tag :type="collectionStatusTagType(item.collection_item)" effect="dark">{{ collectionStageLabel(item.collection_item) }}</el-tag>
-            <el-tag v-for="tag in splitTags(item.collection_item?.release_tags)" :key="tag" :type="isWebReleaseTag(tag) ? 'danger' : undefined" effect="plain">{{ tag }}</el-tag>
-            <el-tag v-for="tag in splitTags(item.collection_item?.group_tags)" :key="tag" type="info" effect="plain">{{ tag }}</el-tag>
+            <el-tag v-for="tag in splitTagValues(item.collection_item?.release_tags)" :key="tag" :type="isWebReleaseTag(tag) ? 'danger' : undefined" effect="plain">{{ tag }}</el-tag>
+            <el-tag v-for="tag in splitTagValues(item.collection_item?.group_tags)" :key="tag" type="info" effect="plain">{{ tag }}</el-tag>
           </div>
           <p class="entry-note">{{ item.collection_item?.note || '暂无备注，点击编辑收藏后补充。' }}</p>
         </div>
@@ -98,7 +98,7 @@ import { Edit, Grid, List } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 
-import { splitTagValues } from '../animePresentation'
+import { seasonLabel, splitTagValues } from '../animePresentation'
 import { collectionStageLabel, collectionStatusTagType, isWebReleaseTag } from '../collectionPresentation'
 import AnimeDialog from '../components/AnimeDialog.vue'
 import AnimeFilterBar from '../components/AnimeFilterBar.vue'
@@ -119,8 +119,8 @@ const dialogVisible = ref(false)
 const dialogAnimeId = ref<number | null>(null)
 const dialogAnimePreview = ref<Anime | null>(null)
 const hydratedAnimeIds = reactive(new Set<number>())
-const releaseTagOptions = computed(() => uniqueOptions(items.value.flatMap((item) => splitTags(item.collection_item?.release_tags)), releaseTags.value))
-const groupTagOptions = computed(() => uniqueOptions(items.value.flatMap((item) => splitTags(item.collection_item?.group_tags)), groupTags.value))
+const releaseTagOptions = computed(() => uniqueOptions(items.value.flatMap((item) => splitTagValues(item.collection_item?.release_tags)), releaseTags.value))
+const groupTagOptions = computed(() => uniqueOptions(items.value.flatMap((item) => splitTagValues(item.collection_item?.group_tags)), groupTags.value))
 const activeFilterChips = computed(() => {
   const chips = [
     year.value ? `年份 ${year.value}` : '',
@@ -145,15 +145,6 @@ function setViewMode(mode: CollectionLayoutMode) {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(COLLECTION_VIEW_MODE_KEY, mode)
   }
-}
-
-function seasonLabel(season: number) {
-  const labels: Record<number, string> = { 1: '1月', 2: '4月', 3: '7月', 4: '10月' }
-  return labels[season] || String(season)
-}
-
-function splitTags(value?: string[] | string | null) {
-  return splitTagValues(value)
 }
 
 function uniqueOptions(values: string[], selected: string[]) {

@@ -189,15 +189,15 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+import { sourceLabel } from '../animePresentation'
 import { useAuthSession } from '../auth'
 import { clearCoverCache, getSettings, resetCollectionData as resetCollectionDataRequest, updateSettings } from '../services/settingsService'
 import {
-  loadManagedTagEntries,
-  loadManagedTags,
-  resetManagedTags as resetStoredManagedTags,
-  saveManagedTags,
+  loadTagLibrary as loadManagedTags,
+  resetTagLibrary as resetStoredManagedTags,
+  saveTagLibrary as saveManagedTags,
   type TagLibraryKind,
-} from '../services/tagService'
+} from '../tagLibrary'
 import type { AppSettings } from '../types'
 
 const router = useRouter()
@@ -210,8 +210,6 @@ const currentAdminUsername = ref('admin')
 const settingsSnapshot = ref<AppSettings | null>(null)
 const releaseTagLibrary = ref<string[]>(loadManagedTags('release'))
 const groupTagLibrary = ref<string[]>(loadManagedTags('group'))
-const releaseTagEntries = ref(loadManagedTagEntries('release'))
-const groupTagEntries = ref(loadManagedTagEntries('group'))
 const releaseTagDraft = ref('')
 const groupTagDraft = ref('')
 const form = reactive({
@@ -221,7 +219,7 @@ const form = reactive({
   new_password: ''
 })
 
-const activeSourceLabel = computed(() => (form.anime_source === 'mikan' ? 'Mikan' : 'YourAnimes'))
+const activeSourceLabel = computed(() => sourceLabel(form.anime_source))
 const activeSourceBaseUrl = computed(() => {
   if (!settingsSnapshot.value) return '-'
   return form.anime_source === 'mikan' ? settingsSnapshot.value.mikan_base_url : settingsSnapshot.value.youranimes_base_url
@@ -269,8 +267,6 @@ async function load() {
     applySnapshot(settings)
     releaseTagLibrary.value = loadManagedTags('release')
     groupTagLibrary.value = loadManagedTags('group')
-    releaseTagEntries.value = loadManagedTagEntries('release')
-    groupTagEntries.value = loadManagedTagEntries('group')
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '加载设置失败')
   } finally {
@@ -302,7 +298,6 @@ function addManagedTag(kind: TagLibraryKind) {
   }
 
   libraryRef.value = next
-  syncTagEntries(kind)
   draftRef.value = ''
   ElMessage.success(`已添加${tagLibraryLabels[kind]}`)
 }
@@ -310,23 +305,13 @@ function addManagedTag(kind: TagLibraryKind) {
 function removeManagedTag(kind: TagLibraryKind, tag: string) {
   const libraryRef = getTagLibraryRef(kind)
   libraryRef.value = saveManagedTags(kind, libraryRef.value.filter((item) => item !== tag))
-  syncTagEntries(kind)
   ElMessage.success(`已移除${tag}`)
 }
 
 function resetManagedTags(kind: TagLibraryKind) {
   const libraryRef = getTagLibraryRef(kind)
   libraryRef.value = resetStoredManagedTags(kind)
-  syncTagEntries(kind)
   ElMessage.success(`已恢复默认${tagLibraryLabels[kind]}`)
-}
-
-function syncTagEntries(kind: TagLibraryKind) {
-  if (kind === 'release') {
-    releaseTagEntries.value = loadManagedTagEntries('release')
-    return
-  }
-  groupTagEntries.value = loadManagedTagEntries('group')
 }
 
 async function clearCache() {

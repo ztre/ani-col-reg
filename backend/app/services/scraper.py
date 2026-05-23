@@ -5,6 +5,15 @@ from urllib.parse import urljoin
 import httpx
 from bs4 import BeautifulSoup
 
+from app.services.html_parsing import (
+    clean_multiline_text as _clean_multiline_text,
+    collapse_whitespace as _collapse_whitespace,
+    find_section_heading as _find_section_heading,
+    first_non_empty as _first_non_empty,
+    meta_content as _meta_content,
+    section_nodes as _section_nodes,
+)
+
 
 SEASON_MONTH = {1: "01", 2: "04", 3: "07", 4: "10"}
 
@@ -238,65 +247,12 @@ def _headline_text(soup: BeautifulSoup) -> str | None:
     return None
 
 
-def _meta_content(soup: BeautifulSoup, *, property_name: str | None = None, name: str | None = None) -> str | None:
-    attrs = {}
-    if property_name:
-        attrs["property"] = property_name
-    if name:
-        attrs["name"] = name
-    node = soup.find("meta", attrs=attrs)
-    if node is None:
-        return None
-    content = node.get("content")
-    return content.strip() if content and content.strip() else None
-
-
-def _find_section_heading(soup: BeautifulSoup, labels: list[str]):
-    label_set = {_collapse_whitespace(label) for label in labels}
-    for tag in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "strong", "dt", "p", "span", "div"]):
-        text = _collapse_whitespace(tag.get_text(" ", strip=True))
-        if not text:
-            continue
-        if text in label_set or any(text.startswith(label) for label in label_set):
-            return tag
-    return None
-
-
-def _section_nodes(heading) -> list:
-    nodes = []
-    for sibling in heading.next_siblings:
-        if getattr(sibling, "name", None) in {"h1", "h2", "h3", "h4", "h5", "h6"}:
-            break
-        if hasattr(sibling, "get_text"):
-            nodes.append(sibling)
-
-    if nodes:
-        return nodes
-
-    parent = getattr(heading, "parent", None)
-    if parent is None:
-        return []
-
-    seen_heading = False
-    for child in parent.children:
-        if child is heading:
-            seen_heading = True
-            continue
-        if not seen_heading:
-            continue
-        if getattr(child, "name", None) in {"h1", "h2", "h3", "h4", "h5", "h6"}:
-            break
-        if hasattr(child, "get_text"):
-            nodes.append(child)
-    return nodes
-
-
 def _section_text(soup: BeautifulSoup, labels: list[str]) -> str | None:
     heading = _find_section_heading(soup, labels)
     if heading is None:
         return None
 
-    parts = [_clean_section_text(node.get_text("\n", strip=True)) for node in _section_nodes(heading)]
+    parts = [_clean_multiline_text(node.get_text("\n", strip=True)) for node in _section_nodes(heading)]
     value = "\n".join(part for part in parts if part)
     if value:
         return value
@@ -304,7 +260,7 @@ def _section_text(soup: BeautifulSoup, labels: list[str]) -> str | None:
     parent = getattr(heading, "parent", None)
     if parent is None:
         return None
-    raw = _clean_section_text(parent.get_text("\n", strip=True))
+    raw = _clean_multiline_text(parent.get_text("\n", strip=True))
     for label in labels:
         if raw.startswith(label):
             raw = raw[len(label) :].strip(" ：:\n")
@@ -374,25 +330,9 @@ def _extract_date(text: str) -> str | None:
     return None
 
 
-def _clean_section_text(text: str) -> str:
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    return "\n".join(lines)
-
-
-def _collapse_whitespace(text: str) -> str:
-    return " ".join(text.split())
-
-
 def _join_tokens(values: list[str]) -> str | None:
     deduped = []
     for value in values:
         if value and value not in deduped:
             deduped.append(value)
     return ", ".join(deduped) if deduped else None
-
-
-def _first_non_empty(*values: str | None) -> str | None:
-    for value in values:
-        if value and value.strip():
-            return value.strip()
-    return None

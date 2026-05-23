@@ -3,13 +3,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NODE_VERSION: ${NODE_VERSION:-22}
+        PYTHON_VERSION: ${PYTHON_VERSION:-3.13}
     container_name: ani-col-reg-app
     restart: unless-stopped
+    env_file:
+      - path: ${ANI_COL_ENV_FILE:-./runtime/.env}
+        required: false
     environment:
-      ANI_COL_DATABASE_URL: sqlite:////app/data/ani_col_reg.sqlite3
-      ANI_COL_PORT: ${ANI_COL_PORT:-8060}
-      PUID: ${PUID:-1000}
-      PGID: ${PGID:-1000}
+      - ANI_COL_PORT=${ANI_COL_PORT:-8060}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
     volumes:
       - ${ANI_COL_ROOT_DIR:-./runtime}/data:/app/data
     ports:

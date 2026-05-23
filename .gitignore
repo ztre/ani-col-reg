@@ -19,4 +19,4 @@ dist/
 .DS_Store
 
 #files
-doc/
+doc/*md

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import get_db
-from app.routes.common import get_app_settings_store, get_source_client, query_anime_page, require_auth, resolve_sync_mode
+from app.routes.common import get_app_settings_store, get_source_client, query_anime_page, require_auth
 from app.schemas import AnimeSearchRequest, PaginatedAnime
 from app.services.cover_cache import CoverCacheService
 from app.services.sync import upsert_records
@@ -19,7 +19,7 @@ async def search_anime(payload: AnimeSearchRequest, db: Session = Depends(get_db
     scraper = get_source_client(stored_settings.anime_source, settings)
     cover_cache = CoverCacheService(settings.cover_cache_dir, public_prefix=settings.cover_cache_public_path)
     seasons = [payload.season] if payload.season else [1, 2, 3, 4]
-    sync_mode = resolve_sync_mode(stored_settings.sync_strategy, payload)
+    sync_mode = 'incremental'
     records = []
 
     for season in seasons:
