@@ -30,13 +30,24 @@ def meta_content(soup: BeautifulSoup, *, property_name: str | None = None, name:
     return content.strip() if content and content.strip() else None
 
 
+_HEADING_TAGS = ["h1", "h2", "h3", "h4", "h5", "h6", "strong", "dt", "summary", "p", "span", "div"]
+
+
 def find_section_heading(soup: BeautifulSoup, labels: list[str]):
     label_set = {collapse_whitespace(label) for label in labels}
-    for tag in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "strong", "dt", "p", "span", "div"]):
+
+    # 第一轮：文本恰好等于标签词（精确命中，优先返回语义最贴近的标题节点）。
+    # 注意：包裹“标题+内容”的容器 div 在文档序上先于内部 h2 被遍历，
+    # 精确匹配可避免误把整个内容区块当作标题。
+    for tag in soup.find_all(_HEADING_TAGS):
         text = collapse_whitespace(tag.get_text(" ", strip=True))
-        if not text:
-            continue
-        if text in label_set or any(text.startswith(label) for label in label_set):
+        if text and text in label_set:
+            return tag
+
+    # 第二轮：前缀匹配，但候选文本必须足够短（防止吞并内容区）。
+    for tag in soup.find_all(_HEADING_TAGS):
+        text = collapse_whitespace(tag.get_text(" ", strip=True))
+        if text and len(text) <= 6 and any(text.startswith(label) for label in label_set):
             return tag
     return None
 

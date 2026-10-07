@@ -1,560 +1,265 @@
 <template>
-  <section class="collection-page">
-    <div class="collection-hero">
-      <div>
-        <p class="collection-eyebrow">Collections</p>
-        <h1>收藏管理</h1>
-        <p class="collection-subcopy">按资源标签、字幕组和备注整理已收藏条目，直接在弹窗里更新本地记录。</p>
-      </div>
+  <div class="page">
+    <!-- 吸顶头部：NavBar 与筛选栏一起钉在滚动容器顶部 -->
+    <div class="collection-header">
+      <NavBar title="我的收藏" />
 
+      <!-- 年份筛选栏：横向滚动胶囊，毛玻璃底，仅在有数据时展示 -->
+      <div v-if="showFilterBar" class="filter-bar frosted">
+        <PillMenu v-model="activeYear" :options="yearOptions" />
+      </div>
     </div>
 
-    <AnimeFilterBar
-      v-model:year="year"
-      v-model:season="season"
-      v-model:release-tags="releaseTags"
-      v-model:group-tags="groupTags"
-      :release-tag-options="releaseTagOptions"
-      :group-tag-options="groupTagOptions"
-      @apply="load"
-      @clear="resetFilters"
-    />
-
-    <section class="collection-summary">
-      <div class="collection-summary-copy">
-        <span class="collection-summary-title">当前收藏 {{ items.length }} 部</span>
-        <span class="collection-summary-subtitle">按年份、季度和资源标签快速整理本地收藏记录。</span>
-      </div>
-
-      <div class="collection-summary-actions">
-        <div v-if="activeFilterChips.length" class="collection-summary-chips">
-          <span v-for="chip in activeFilterChips" :key="chip" class="collection-summary-chip">{{ chip }}</span>
-        </div>
-
-        <div class="collection-layout-switch">
-          <div class="layout-switch-buttons">
-            <el-button
-              :type="viewMode === 'list' ? 'primary' : 'default'"
-              :icon="List"
-              circle
-              aria-label="列表模式"
-              title="列表模式"
-              @click="setViewMode('list')"
-            />
-            <el-button
-              :type="viewMode === 'cards' ? 'primary' : 'default'"
-              :icon="Grid"
-              circle
-              aria-label="小卡片模式"
-              title="小卡片模式"
-              @click="setViewMode('cards')"
-            />
+    <div v-if="loading" class="list-section">
+      <div class="list-group" aria-hidden="true">
+        <div v-for="index in 6" :key="index" class="skeleton-row">
+          <div class="skeleton skeleton-thumb" />
+          <div class="skeleton-row-lines">
+            <div class="skeleton skeleton-line skeleton-line--wide" />
+            <div class="skeleton skeleton-line skeleton-line--narrow" />
           </div>
         </div>
       </div>
-    </section>
-
-    <div v-loading="loading" :class="['collection-stack', `collection-stack--${viewMode}`]">
-      <article v-for="item in items" :key="item.id" :class="['collection-entry', `collection-entry--${viewMode}`]">
-        <div class="entry-poster">
-          <img v-if="item.cover_url" :src="item.cover_url" :alt="`${item.title_cn} 封面`" loading="lazy" />
-          <div v-else class="entry-poster-fallback">{{ item.title_cn.slice(0, 2) }}</div>
-        </div>
-
-        <div class="entry-main">
-          <div class="entry-meta">{{ item.year }} / {{ seasonLabel(item.season) }}</div>
-          <h2>{{ item.title_cn }}</h2>
-          <div class="entry-chip-row">
-            <el-tag :type="collectionStatusTagType(item.collection_item)" effect="dark">{{ collectionStageLabel(item.collection_item) }}</el-tag>
-            <el-tag v-for="tag in splitTagValues(item.collection_item?.release_tags)" :key="tag" :type="isWebReleaseTag(tag) ? 'danger' : undefined" effect="plain">{{ tag }}</el-tag>
-            <el-tag v-for="tag in splitTagValues(item.collection_item?.group_tags)" :key="tag" type="info" effect="plain">{{ tag }}</el-tag>
-          </div>
-          <p class="entry-note">{{ item.collection_item?.note || '暂无备注，点击编辑收藏后补充。' }}</p>
-        </div>
-
-        <div class="entry-actions">
-          <el-button :icon="Edit" @click="openDialog(item)">编辑收藏</el-button>
-        </div>
-      </article>
     </div>
 
-    <el-empty v-if="!loading && items.length === 0" description="暂无收藏记录" />
+    <div v-else-if="loadError" class="state-section">
+      <EmptyState icon="warning" title="加载失败" hint="请检查网络连接后重试" />
+      <button type="button" class="retry-button" @click="load">重试</button>
+    </div>
 
-    <AnimeDialog
-      v-model="dialogVisible"
-      :anime-id="dialogAnimeId"
-      :initial-anime="dialogAnimePreview"
-      :detail-loaded="hydratedAnimeIds.has(dialogAnimeId || -1)"
-      @saved="handleDialogSaved"
-      @removed="handleDialogRemoved"
-      @loaded="handleDialogLoaded"
-      @error="ElMessage.error"
+    <EmptyState
+      v-else-if="!groups.length"
+      icon="heart"
+      title="还没有收藏"
+      hint="去导视页逛逛吧"
     />
-  </section>
+
+    <div v-else class="list-section">
+      <div class="list-group is-grid">
+        <SeriesRow v-for="group in visibleGroups" :key="group.series_key" :group="group" />
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { Edit, Grid, List } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onActivated, onMounted, ref } from 'vue'
 
-import { seasonLabel, splitTagValues } from '../animePresentation'
-import { collectionStageLabel, collectionStatusTagType, isWebReleaseTag } from '../collectionPresentation'
-import AnimeDialog from '../components/AnimeDialog.vue'
-import AnimeFilterBar from '../components/AnimeFilterBar.vue'
-import { listAnime } from '../services/animeService'
-import type { Anime, CollectionItem } from '../types'
+import EmptyState from '../components/EmptyState.vue'
+import NavBar from '../components/NavBar.vue'
+import PillMenu from '../components/PillMenu.vue'
+import SeriesRow from '../components/SeriesRow.vue'
+import { fetchCollectedSeries } from '../services/collectionService'
+import type { SeriesGroup } from '../types'
 
-type CollectionLayoutMode = 'list' | 'cards'
+const loading = ref(true)
+const loadError = ref(false)
+const groups = ref<SeriesGroup[]>([])
 
-const COLLECTION_VIEW_MODE_KEY = 'ani-col-reg.collection-view-mode'
-const year = ref<string | undefined>()
-const season = ref<number | undefined>()
-const releaseTags = ref<string[]>([])
-const groupTags = ref<string[]>([])
-const items = ref<Anime[]>([])
-const loading = ref(false)
-const viewMode = ref<CollectionLayoutMode>(loadCollectionViewMode())
-const dialogVisible = ref(false)
-const dialogAnimeId = ref<number | null>(null)
-const dialogAnimePreview = ref<Anime | null>(null)
-const hydratedAnimeIds = reactive(new Set<number>())
-const releaseTagOptions = computed(() => uniqueOptions(items.value.flatMap((item) => splitTagValues(item.collection_item?.release_tags)), releaseTags.value))
-const groupTagOptions = computed(() => uniqueOptions(items.value.flatMap((item) => splitTagValues(item.collection_item?.group_tags)), groupTags.value))
-const activeFilterChips = computed(() => {
-  const chips = [
-    year.value ? `年份 ${year.value}` : '',
-    season.value ? `季度 ${seasonLabel(season.value)}` : '',
-    ...releaseTags.value.map((tag) => `资源 ${tag}`),
-    ...groupTags.value.map((tag) => `字幕组 ${tag}`),
+// 年份筛选：'all' 表示全部，其余为具体年份字符串（PillMenu 的 v-model 为字符串）
+const activeYear = ref('all')
+
+// 筛选栏仅在有数据时展示（加载中 / 出错 / 空收藏均不渲染）
+const showFilterBar = computed(() => !loading.value && !loadError.value && groups.value.length > 0)
+
+// 年份选项：全部 + 收藏系列覆盖的全部年份（降序去重，取各系列条目年份并集）
+const yearOptions = computed(() => {
+  const years = new Set<number>()
+  for (const group of groups.value) {
+    years.add(group.latest_year)
+    for (const entry of group.entries) {
+      years.add(entry.year)
+    }
+  }
+  return [
+    { value: 'all', label: '全部' },
+    ...[...years].sort((a, b) => b - a).map((year) => ({ value: String(year), label: String(year) }))
   ]
-  return chips.filter(Boolean)
 })
 
-function loadCollectionViewMode(): CollectionLayoutMode {
-  if (typeof window === 'undefined') {
-    return 'list'
-  }
-
-  const saved = window.localStorage.getItem(COLLECTION_VIEW_MODE_KEY)
-  return saved === 'cards' ? 'cards' : 'list'
-}
-
-function setViewMode(mode: CollectionLayoutMode) {
-  viewMode.value = mode
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(COLLECTION_VIEW_MODE_KEY, mode)
-  }
-}
-
-function uniqueOptions(values: string[], selected: string[]) {
-  return [...new Set([...selected, ...values].map((item) => item.trim()).filter(Boolean))]
-}
-
-function resetFilters() {
-  year.value = undefined
-  season.value = undefined
-  releaseTags.value = []
-  groupTags.value = []
-  void load()
-}
+// 过滤 + 排序：选中年份时保留“该年有任何季度条目”的系列（同一作品跨年份不拆散）；
+// 数据无收藏时间字段（见 types.ts），排序固定按名字（series_title 升序）
+const visibleGroups = computed(() => {
+  const filtered =
+    activeYear.value === 'all'
+      ? groups.value
+      : groups.value.filter((group) =>
+          group.entries.some((entry) => entry.year === Number(activeYear.value))
+        )
+  return [...filtered].sort((a, b) => a.series_title.localeCompare(b.series_title, 'zh-Hans-CN'))
+})
 
 async function load() {
   loading.value = true
+  loadError.value = false
   try {
-    const data = await listAnime({
-      collected: true,
-      year: year.value ? Number(year.value) : undefined,
-      season: season.value,
-      release_tag: releaseTags.value,
-      group_tag: groupTags.value,
-      page_size: 100
-    })
-    items.value = data.items
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载失败')
+    groups.value = await fetchCollectedSeries()
+    // 数据刷新后选中年份可能已不存在，回退到全部
+    if (
+      activeYear.value !== 'all' &&
+      !yearOptions.value.some((option) => option.value === activeYear.value)
+    ) {
+      activeYear.value = 'all'
+    }
+  } catch {
+    loadError.value = true
   } finally {
     loading.value = false
   }
 }
 
-function openDialog(item: Anime) {
-  dialogAnimeId.value = item.id
-  dialogAnimePreview.value = { ...item, collection_item: item.collection_item ? { ...item.collection_item } : null }
-  dialogVisible.value = true
-}
-
-function handleDialogSaved(payload: { animeId: number; collection: CollectionItem }) {
-  const item = items.value.find((entry) => entry.id === payload.animeId)
-  if (item) {
-    item.collection_item = payload.collection
-  }
-  if (dialogAnimePreview.value?.id === payload.animeId) {
-    dialogAnimePreview.value = {
-      ...dialogAnimePreview.value,
-      collection_item: payload.collection,
-    }
-  }
-  ElMessage.success('已保存')
-}
-
-function handleDialogLoaded(anime: Anime) {
-  hydratedAnimeIds.add(anime.id)
-  const item = items.value.find((entry) => entry.id === anime.id)
-  if (item) {
-    Object.assign(item, anime)
-  }
-  if (dialogAnimePreview.value?.id === anime.id) {
-    dialogAnimePreview.value = {
-      ...anime,
-      collection_item: anime.collection_item ? { ...anime.collection_item } : null,
-    }
-  }
-}
-
-function handleDialogRemoved(payload: { animeId: number }) {
-  items.value = items.value.filter((entry) => entry.id !== payload.animeId)
-  if (dialogAnimeId.value === payload.animeId) {
-    dialogVisible.value = false
-    dialogAnimeId.value = null
-    dialogAnimePreview.value = null
-  }
-  ElMessage.success('已取消收藏')
-}
-
 onMounted(load)
+
+// keep-alive 缓存态：每次切回/返回时刷新（详情页可能新增了收藏）
+onActivated(load)
 </script>
 
 <style scoped>
-.collection-page {
-  display: grid;
-  gap: 20px;
+.page {
+  padding-bottom: 24px;
 }
 
-.collection-hero {
-  position: relative;
+/* 吸顶头部：NavBar 与筛选栏整体钉在滚动容器顶部 */
+.collection-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* 年份筛选栏：毛玻璃底，跟随 NavBar 下方（样式复用 PillMenu 胶囊） */
+.filter-bar {
+  padding-bottom: 4px;
+}
+
+/* 桌面端筛选栏与下方列表限宽对齐 */
+@media (min-width: 1024px) {
+  .filter-bar {
+    max-width: 828px; /* 780 + 左右 padding */
+    margin: 0 auto;
+    padding-bottom: 6px;
+  }
+
+  .filter-bar :deep(.pill-menu) {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+.list-section {
+  padding: 6px 16px 0;
+}
+
+/* 桌面端列表限宽居中，避免行宽过长难以扫读 */
+@media (min-width: 1024px) {
+  .list-section {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 10px 24px 0;
+  }
+
+  /* 桌面端网格：行组件自适应列宽（内部 flex 弹性布局），套卡片皮肤 */
+  .list-group.is-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    background: transparent;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  /* 网格卡片：独立底色 + 圆角 + 阴影，覆盖默认分组列表分隔线 */
+  .list-group.is-grid > * {
+    border-top: none;
+    background: var(--bg-elevated);
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    transition: transform 200ms ease;
+  }
+
+  .list-group.is-grid > *:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* 超宽屏（≥1440px）：3 列网格，容器放宽与主内容区同宽 */
+@media (min-width: 1440px) {
+  .list-section {
+    max-width: 1100px;
+  }
+
+  .list-group.is-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.state-section {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 28px clamp(220px, 32vw, 340px) 28px 30px;
-  overflow: hidden;
-  isolation: isolate;
-  background: var(--hero-surface);
-  border: 1px solid var(--surface-line);
-  border-radius: 28px;
-  box-shadow: var(--elevation-hero);
+  flex-direction: column;
 }
 
-.collection-hero::before {
-  position: absolute;
-  inset: 16px 12px 12px auto;
-  width: min(38%, 260px);
-  background-image: var(--hero-library-image);
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-position: right center;
-  content: '';
-  pointer-events: none;
-  opacity: 0.94;
-  z-index: 0;
-}
-
-.collection-hero::after {
-  position: absolute;
-  inset: auto -6% -36% auto;
-  width: 280px;
-  height: 280px;
-  background: var(--hero-art-glow);
-  content: '';
-  pointer-events: none;
-}
-
-.collection-hero > * {
-  position: relative;
-  z-index: 1;
-}
-
-.collection-eyebrow {
-  margin: 0 0 8px;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.collection-hero h1,
-.entry-main h2 {
-  margin: 0;
-}
-
-.collection-subcopy,
-.entry-main p {
-  margin: 8px 0 0;
-  color: var(--text-muted);
-  line-height: 1.7;
-}
-
-.collection-layout-switch {
-  display: flex;
-  align-items: center;
-}
-
-.layout-switch-buttons {
-  display: inline-flex;
-  gap: 8px;
-  padding: 6px;
-  background: var(--surface-panel-strong);
-  border: 1px solid var(--surface-line);
-  border-radius: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-.layout-switch-buttons :deep(.el-button) {
-  width: 42px;
-  height: 42px;
-  margin: 0;
-  border-radius: 14px;
-}
-
-.collection-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 4px;
-}
-
-.collection-summary-copy {
-  display: grid;
-  gap: 2px;
-}
-
-.collection-summary-title {
-  color: var(--text-strong);
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.collection-summary-subtitle {
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.collection-summary-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.collection-summary-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.collection-summary-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
-  color: var(--text-soft);
-  background: var(--surface-chip);
-  border: 1px solid var(--surface-line);
+.retry-button {
+  align-self: center;
+  margin-top: -36px;
+  padding: 8px 32px;
   border-radius: 999px;
-  font-size: 12px;
+  background: var(--fill);
+  color: var(--accent);
+  font-size: 15px;
   font-weight: 600;
+  transition: opacity 200ms ease;
 }
 
-.collection-stack {
-  display: grid;
-  min-height: 240px;
+.retry-button:active {
+  opacity: 0.6;
 }
 
-.collection-stack--list {
-  gap: 16px;
-}
-
-.collection-stack--cards {
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 18px;
-}
-
-.collection-entry {
-  background: var(--surface-card);
-  border: 1px solid var(--surface-line);
-  border-radius: 24px;
-  box-shadow: var(--elevation-card);
-}
-
-.collection-entry--list {
-  display: grid;
-  grid-template-columns: 110px minmax(0, 1fr) auto;
-  gap: 18px;
+.skeleton-row {
+  display: flex;
   align-items: center;
-  padding: 18px;
+  gap: 12px;
+  padding: 10px 16px;
 }
 
-.collection-entry--cards {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-  align-items: start;
-  padding: 14px;
-}
-
-.entry-poster {
-  width: 100%;
-  overflow: hidden;
-  border-radius: 18px;
-  aspect-ratio: 4 / 5;
-  background: var(--poster-card-bg);
-}
-
-.entry-poster img,
-.entry-poster-fallback {
-  width: 100%;
-  height: 100%;
-}
-
-.entry-poster img {
-  display: block;
-  object-fit: cover;
-}
-
-.entry-poster-fallback {
-  display: grid;
-  place-items: center;
-  color: #ffffff;
-  background: var(--poster-fallback-gradient);
-  font-size: 26px;
-  font-weight: 800;
-}
-
-.entry-main {
-  display: grid;
-  gap: 8px;
+.skeleton-row-lines {
+  flex: 1;
   min-width: 0;
 }
 
-.collection-entry--cards .entry-main {
-  gap: 6px;
+.skeleton {
+  border-radius: 8px;
+  background: linear-gradient(100deg, var(--fill) 40%, var(--bg-elevated) 50%, var(--fill) 60%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
 
-.entry-main h2 {
-  color: var(--text-strong);
-  font-size: 22px;
+.skeleton-thumb {
+  flex-shrink: 0;
+  width: 56px;
+  height: 74px;
 }
 
-.collection-entry--cards .entry-main h2 {
-  font-size: 18px;
-  line-height: 1.3;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
 }
 
-.entry-note {
-  margin: 0;
+.skeleton-line--wide {
+  width: 88%;
 }
 
-.collection-entry--cards .entry-note {
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.55;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+.skeleton-line--narrow {
+  width: 54%;
+  margin-top: 10px;
 }
 
-.entry-meta {
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.collection-entry--cards .entry-meta {
-  font-size: 12px;
-}
-
-.entry-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.collection-entry--cards .entry-chip-row {
-  gap: 6px;
-}
-
-.entry-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.collection-entry--cards .entry-actions {
-  justify-content: stretch;
-}
-
-.collection-entry--cards .entry-actions :deep(.el-button) {
-  width: 100%;
-}
-
-.entry-actions :deep(.el-button) {
-  border-radius: 16px;
-}
-
-@media (max-width: 960px) {
-  .collection-hero {
-    padding-right: 30px;
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
   }
 
-  .collection-hero::before {
-    width: 180px;
-    opacity: 0.28;
-  }
-
-  .collection-entry--list {
-    grid-template-columns: 1fr;
-  }
-
-  .collection-hero,
-  .collection-summary,
-  .collection-summary-actions {
-    align-items: stretch;
-  }
-
-  .collection-entry--list .entry-poster {
-    width: 140px;
-  }
-
-  .entry-actions {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 640px) {
-  .collection-summary-actions,
-  .collection-summary-chips,
-  .layout-switch-buttons {
-    width: 100%;
-  }
-
-  .collection-summary-actions,
-  .collection-summary-chips,
-  .layout-switch-buttons {
-    justify-content: flex-start;
-  }
-
-  .layout-switch-buttons :deep(.el-button) {
-    flex: 0 0 auto;
+  100% {
+    background-position: -200% 0;
   }
 }
 </style>

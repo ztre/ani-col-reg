@@ -3,13 +3,23 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException
-from sqlalchemy import delete, exists, func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.config import get_settings
 from app.database import SessionLocal, get_db
 from app.models import AnimeMapping, AnimeMaster, CollectionItem, EpisodeProgress
-from app.schemas import AppSettingsOut, AnimeOut, AnimeSearchRequest, AuthStatusOut, AuthUserOut, CollectionResetActionOut, MaintenanceActionOut, PaginatedAnime
+from app.schemas import (
+    AppSettingsOut,
+    AnimeOut,
+    AnimeSearchRequest,
+    AuthStatusOut,
+    AuthUserOut,
+    CollectionResetActionOut,
+    MaintenanceActionOut,
+    PaginatedAnime,
+    SeriesGroupOut,
+)
 from app.security import decode_token
 from app.services.app_settings import AppSettingsStore, StoredAppSettings
 from app.services.cover_cache import CoverCacheService, clear_cover_cache, clear_missing_cached_cover_references, cover_cache_stats, is_known_placeholder_cover_url, repair_cached_cover_url
@@ -176,7 +186,10 @@ def fallback_record_from_anime(anime: AnimeMaster) -> AnimeSourceRecord:
 def needs_detail_refresh(anime: AnimeMaster) -> bool:
     if not anime.source_url:
         return False
-    if any(not value for value in [anime.synopsis, anime.staff, anime.cast, anime.tags, anime.cover_url]):
+    # 详情字段（synopsis/staff/cast/tags）全部为空说明从未抓取过详情；
+    # 部分为空（如源站本就无简介）不再重复触发，避免“刷新中”死循环。
+    # 封面缺失仍需补抓。
+    if not any([anime.synopsis, anime.staff, anime.cast, anime.tags]) or not anime.cover_url:
         return True
 
     settings = get_settings()
@@ -236,7 +249,29 @@ def load_anime_record(anime_id: int, db: Session) -> AnimeMaster | None:
 
 def serialize_anime(anime: AnimeMaster, *, detail_refreshing: bool = False) -> AnimeOut:
     payload = AnimeOut.model_validate(anime)
-    return payload.model_copy(update={'detail_refreshing': detail_refreshing})
+    return payload.model_copy(
+        update={
+            'detail_refreshing': detail_refreshing,
+            'is_collected': anime.collection_item is not None,
+            'emby_organized': bool(
+                anime.collection_item.emby_organized if anime.collection_item else False
+            ),
+        }
+    )
+
+
+def build_series_group(entries: list[AnimeMaster]) -> SeriesGroupOut:
+    ordered = sorted(entries, key=lambda anime: (anime.year, anime.season, anime.title_cn))
+    latest = max(ordered, key=lambda anime: (anime.year, anime.season))
+    return SeriesGroupOut(
+        series_key=ordered[0].series_key,
+        series_title=ordered[0].series_title,
+        entry_count=len(ordered),
+        latest_year=max(anime.year for anime in ordered),
+        latest_season=max(anime.season for anime in ordered),
+        cover_url=latest.cover_url,
+        entries=[serialize_anime(anime) for anime in ordered],
+    )
 
 
 async def hydrate_anime_detail_record(anime: AnimeMaster, db: Session) -> AnimeMaster | None:
@@ -274,24 +309,6 @@ async def hydrate_anime_detail(anime_id: int) -> None:
             await hydrate_anime_detail_record(anime, db)
     finally:
         DETAIL_REFRESH_INFLIGHT.discard(anime_id)
-
-
-def json_array_contains(column, candidate: str):
-    normalized = candidate.strip().lower()
-    json_each_alias = func.json_each(column).table_valued('value').alias()
-    return exists(
-        select(1)
-        .select_from(json_each_alias)
-        .where(func.lower(json_each_alias.c.value) == normalized)
-    )
-
-
-def normalize_query_text_values(values: list[str] | str | None) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, str):
-        values = [values]
-    return [value.strip() for value in values if value and value.strip()]
 
 
 def query_anime_page(

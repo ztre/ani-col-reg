@@ -1,11 +1,7 @@
 import { createApp } from 'vue'
 
 import App from './App.vue'
-import elementPlusPlugin from './elementPlus'
 import router from './router'
-import { initializeThemeMode } from './theme'
-import './styles.css'
+import './styles/base.css'
 
-initializeThemeMode()
-
-createApp(App).use(router).use(elementPlusPlugin).mount('#app')
+createApp(App).use(router).mount('#app')

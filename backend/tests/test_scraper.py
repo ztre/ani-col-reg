@@ -1,7 +1,22 @@
+import asyncio
 from pathlib import Path
+from types import SimpleNamespace
 
+import httpx
+import pytest
+
+from app.services import scraper as scraper_module
 from app.services.mikan import extract_bangumi_subject_url, merge_detail_records, parse_bangumi_detail_html, parse_mikan_cover_html, parse_mikan_detail_html, parse_mikan_season_html
-from app.services.scraper import AnimeSourceRecord, parse_detail_html, parse_season_html, season_url
+from app.services.scraper import AnimeSourceRecord, YourAnimesScraper, parse_detail_html, parse_season_html, season_url
+
+
+def install_mock_client(monkeypatch, handler) -> None:
+    transport = httpx.MockTransport(handler)
+
+    def factory(**kwargs):
+        return httpx.AsyncClient(transport=transport, **kwargs)
+
+    monkeypatch.setattr(scraper_module, "httpx", SimpleNamespace(AsyncClient=factory))
 
 
 def test_season_url_uses_bangumi_path() -> None:
@@ -244,3 +259,104 @@ def test_merge_detail_records_uses_supplement_cover_when_primary_is_placeholder(
     merged = merge_detail_records(primary, supplement)
 
     assert merged.cover_url == "https://bgm.tv/pic/cover/l/c9/b1/354700_S6YP6.jpg"
+
+
+def test_parse_detail_html_synopsis_not_polluted_by_page_container() -> None:
+    # 回归：包裹“簡介”标题+内容的容器 div 在文档序上先于 h2，
+    # 旧前缀匹配会命中它并回退到整页文本；现在必须只取简介区块本身。
+    from pathlib import Path
+
+    from app.services.scraper import AnimeSourceRecord, parse_detail_html
+
+    html = Path(__file__).parent / "fixtures" / "youranimes_detail.html"
+    fallback = AnimeSourceRecord(title_cn="x", source_id=None, source_url=None, year=2026, season=2)
+    record = parse_detail_html(
+        html.read_text(encoding="utf-8"),
+        "https://youranimes.tw",
+        "https://youranimes.tw/animes/6075",
+        fallback=fallback,
+    )
+    assert record.synopsis is not None
+    assert len(record.synopsis) < 500
+    assert record.synopsis.startswith("〔 原作資訊 〕")
+    assert "動畫資料" not in record.synopsis  # 面包屑文本不得混入
+    assert "相關連結" not in record.synopsis
+
+
+def test_search_source_normalizes_api_results(monkeypatch) -> None:
+    captured: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "result": [
+                    {
+                        "_id": "249",
+                        "name": "鬼滅之刃",
+                        "jpName": "鬼滅の刃",
+                        "cover": "https://cdn.example.test/kimetsu.webp",
+                        "episode": "26",
+                        "tags": {"奇幻": True, "動作": True},
+                    },
+                    {
+                        "_id": 1234,
+                        "name": "无封面条目",
+                        "jpName": None,
+                        "cover": None,
+                    },
+                ],
+                "metadata": {"total": 13},
+            },
+        )
+
+    install_mock_client(monkeypatch, handler)
+
+    result = asyncio.run(YourAnimesScraper("https://youranimes.tw").search_source("鬼滅", page=2, size=10))
+
+    assert len(captured) == 1
+    assert captured[0].url.path == "/api/v1/animes"
+    assert captured[0].url.params["tk"] == "鬼滅"
+    assert captured[0].url.params["page"] == "2"
+    assert captured[0].url.params["size"] == "10"
+    assert result == {
+        "items": [
+            {
+                "source_id": "249",
+                "title": "鬼滅之刃",
+                "title_jp": "鬼滅の刃",
+                "cover_url": "https://cdn.example.test/kimetsu.webp",
+                "source_url": "https://youranimes.tw/animes/249",
+            },
+            {
+                "source_id": "1234",
+                "title": "无封面条目",
+                "title_jp": None,
+                "cover_url": None,
+                "source_url": "https://youranimes.tw/animes/1234",
+            },
+        ],
+        "total": 13,
+    }
+
+
+def test_search_source_returns_empty_items_for_empty_result(monkeypatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"result": [], "metadata": {"total": 0}})
+
+    install_mock_client(monkeypatch, handler)
+
+    result = asyncio.run(YourAnimesScraper("https://youranimes.tw").search_source("不存在的番剧"))
+
+    assert result == {"items": [], "total": 0}
+
+
+def test_search_source_raises_http_status_error_for_non_2xx(monkeypatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500)
+
+    install_mock_client(monkeypatch, handler)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        asyncio.run(YourAnimesScraper("https://youranimes.tw").search_source("鬼滅"))

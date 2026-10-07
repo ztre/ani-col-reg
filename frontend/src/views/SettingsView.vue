@@ -1,920 +1,565 @@
 <template>
-  <section class="settings-page">
-    <header class="settings-hero">
-      <div>
-        <p class="settings-eyebrow">Settings</p>
-        <h1>系统配置中心</h1>
-        <p>集中管理数据源、封面缓存、标签复用和管理员账号，避免在不同页面来回切换。</p>
-      </div>
-      <el-button class="settings-refresh" :icon="RefreshRight" @click="load">重新获取</el-button>
-    </header>
+  <div class="page">
+    <NavBar title="系统设置" />
 
-    <div v-loading="loading" class="settings-grid">
-      <section class="settings-card">
-        <div class="settings-card-copy">
-          <p class="settings-label">Source</p>
-          <h2>数据源</h2>
-          <p>“搜索并更新”以及详情补抓都会使用这里选中的站点。切换后会清空当前番剧库，避免不同源的数据混在一起。</p>
-        </div>
-
-        <el-radio-group v-model="form.anime_source" class="sync-strategy-group">
-          <label class="strategy-option" :class="{ 'strategy-option--active': form.anime_source === 'youranimes' }">
-            <el-radio value="youranimes">YourAnimes</el-radio>
-            <p>详情字段更完整，适合优先补全简介、制作阵容、声优和 PV 等信息。</p>
-          </label>
-
-          <label class="strategy-option" :class="{ 'strategy-option--active': form.anime_source === 'mikan' }">
-            <el-radio value="mikan">Mikan</el-radio>
-            <p>适合优先同步季度条目和封面，打开弹窗时再按需补抓详情并缓存。</p>
-          </label>
-        </el-radio-group>
-
-        <div class="settings-readonly">
-          <span>当前请求地址</span>
-          <strong>{{ activeSourceBaseUrl }}</strong>
-        </div>
-      </section>
-
-      <section class="settings-card">
-        <div class="settings-card-copy">
-          <p class="settings-label">Maintenance</p>
-          <h2>缓存与数据维护</h2>
-          <p>这里可以清理本地封面缓存，或重置收藏管理里的本地收藏记录。重置收藏只会删除整理状态、标签和备注，不会移除番剧库条目和封面文件。</p>
-        </div>
-
-        <div class="maintenance-metrics">
-          <div class="metric-card">
-            <span>收藏记录数</span>
-            <strong>{{ settingsSnapshot?.collection_count ?? 0 }}</strong>
-          </div>
-
-          <div class="metric-card">
-            <span>缓存文件数</span>
-            <strong>{{ settingsSnapshot?.cover_cache_file_count ?? 0 }}</strong>
-          </div>
-
-          <div class="metric-card">
-            <span>缓存体积</span>
-            <strong>{{ coverCacheSizeLabel }}</strong>
-          </div>
-        </div>
-
-        <div class="settings-readonly">
-          <span>当前使用数据源</span>
-          <strong>{{ activeSourceLabel }}</strong>
-        </div>
-
-        <div class="settings-readonly">
-          <span>最近一次保存</span>
-          <strong>{{ updatedAtLabel }}</strong>
-        </div>
-
-        <div class="settings-readonly settings-readonly--danger">
-          <span>数据重置范围</span>
-          <strong>仅清理收藏记录，不删除番剧库</strong>
-        </div>
-
-        <div class="maintenance-actions">
-          <el-button :loading="clearingCache" @click="clearCache">清理封面缓存</el-button>
-          <el-button class="maintenance-reset" :loading="resettingCollectionData" @click="resetCollectionData">重置收藏数据</el-button>
-        </div>
-      </section>
-
-      <section class="settings-card settings-card--wide">
-        <div class="settings-card-copy">
-          <p class="settings-label">Tags</p>
-          <h2>标签管理</h2>
-          <p>管理当前浏览器里常用的资源标签和字幕组标签，收藏整理时可以直接复用。这里修改的是可选标签列表，不会直接改动已有收藏记录。</p>
-        </div>
-
-        <div class="tag-manager-grid">
-          <section class="tag-manager-panel">
-            <div class="tag-manager-heading">
-              <div class="tag-manager-copy">
-                <h3>资源标签</h3>
-                <p>用于整理片源类型、编码或分辨率，例如 BDRip、WEB-DL、1080p。</p>
-              </div>
-
-              <el-button text class="tag-manager-reset" @click="resetManagedTags('release')">恢复默认</el-button>
-            </div>
-
-            <div class="tag-manager-entry">
-              <el-input v-model="releaseTagDraft" size="large" placeholder="新增资源标签" @keyup.enter="addManagedTag('release')" />
-              <el-button class="tag-manager-add" @click="addManagedTag('release')">添加</el-button>
-            </div>
-
-            <div v-if="releaseTagLibrary.length" class="tag-chip-list">
-              <el-tag v-for="tag in releaseTagLibrary" :key="tag" closable @close="removeManagedTag('release', tag)">{{ tag }}</el-tag>
-            </div>
-            <div v-else class="tag-chip-empty">当前没有可复用的资源标签</div>
-          </section>
-
-          <section class="tag-manager-panel">
-            <div class="tag-manager-heading">
-              <div class="tag-manager-copy">
-                <h3>字幕组 / 压制组</h3>
-                <p>用于整理字幕组、压制组或发布团队，例如 ANi、Lilith-Raws、LoliHouse。</p>
-              </div>
-
-              <el-button text class="tag-manager-reset" @click="resetManagedTags('group')">恢复默认</el-button>
-            </div>
-
-            <div class="tag-manager-entry">
-              <el-input v-model="groupTagDraft" size="large" placeholder="新增字幕组 / 压制组标签" @keyup.enter="addManagedTag('group')" />
-              <el-button class="tag-manager-add" @click="addManagedTag('group')">添加</el-button>
-            </div>
-
-            <div v-if="groupTagLibrary.length" class="tag-chip-list">
-              <el-tag v-for="tag in groupTagLibrary" :key="tag" type="info" closable @close="removeManagedTag('group', tag)">{{ tag }}</el-tag>
-            </div>
-            <div v-else class="tag-chip-empty">当前没有可复用的字幕组标签</div>
-          </section>
-        </div>
-      </section>
-
-      <section class="settings-card settings-card--wide settings-card--security">
-        <div class="settings-card-copy">
-          <p class="settings-label">Security</p>
-          <h2>登录与账号</h2>
-          <p>修改管理员账号或密码后会立即要求重新登录，避免旧登录态继续使用过期凭据。</p>
-        </div>
-
-        <div class="settings-account-stack">
-          <div class="settings-account-summary">
-            <div class="settings-readonly settings-account-summary-card">
-              <span>当前管理员</span>
-              <strong>{{ currentAdminUsername }}</strong>
-            </div>
-
-            <div class="settings-readonly settings-account-summary-card" :class="{ 'settings-readonly--danger': settingsSnapshot?.requires_password_change }">
-              <span>密码状态</span>
-              <strong>{{ passwordStatusLabel }}</strong>
-            </div>
-
-            <div class="settings-account-note">
-              <p class="settings-account-note-label">更新规则</p>
-              <p>仅修改账号名可直接保存；修改密码时需要填写当前密码，新密码至少 6 位。保存后若账号或密码有变化，会立即跳回登录页。</p>
-            </div>
-          </div>
-
-          <el-form label-position="top" class="settings-form settings-form--security">
-            <div class="settings-account-fields">
-              <el-form-item label="管理员账号">
-                <el-input v-model="form.admin_username" size="large" />
-              </el-form-item>
-
-              <el-form-item label="当前密码">
-                <el-input v-model="form.current_password" size="large" show-password placeholder="仅在修改密码时填写" />
-              </el-form-item>
-
-              <el-form-item label="新密码" class="settings-account-field--wide">
-                <el-input v-model="form.new_password" size="large" show-password placeholder="至少 6 位，留空则不修改" />
-              </el-form-item>
-            </div>
-          </el-form>
-        </div>
-      </section>
+    <!-- 加载中 -->
+    <div v-if="loading" class="loading-section" role="status" aria-label="加载中">
+      <span class="loading-spinner" aria-hidden="true" />
     </div>
 
-    <div class="settings-actions">
-      <el-button class="settings-cancel" size="large" @click="load">恢复当前设置</el-button>
-      <el-button class="settings-submit" type="primary" size="large" :loading="saving" @click="submit">保存并应用</el-button>
+    <!-- 加载失败 -->
+    <div v-else-if="loadError" class="state-section">
+      <EmptyState icon="warning" title="加载失败" hint="请检查网络连接后重试" />
+      <button type="button" class="retry-button" @click="load">重试</button>
     </div>
-  </section>
+
+    <!-- 设置表单 -->
+    <form v-else class="settings-section" novalidate @submit.prevent="save">
+      <!-- 基本信息 -->
+      <section class="settings-group">
+        <h2 class="group-header">基本信息</h2>
+        <div class="group-card">
+          <div class="field-row">
+            <label class="field-label" for="settings-app-name">应用名</label>
+            <input
+              id="settings-app-name"
+              v-model="form.appName"
+              class="field-input"
+              type="text"
+              placeholder="番剧收藏登记系统"
+              autocomplete="off"
+            />
+          </div>
+          <div class="field-row">
+            <span class="field-label">数据源地址</span>
+            <span class="field-value">
+              {{ dataSourceUrl }}
+              <span class="source-tag">{{ dataSourceName }}</span>
+            </span>
+          </div>
+        </div>
+        <p class="group-footer">数据源地址由服务端环境配置提供，仅供查看。</p>
+      </section>
+
+      <!-- 默认查询 -->
+      <section class="settings-group">
+        <h2 class="group-header">默认查询</h2>
+        <div class="group-card">
+          <div class="field-row">
+            <label class="field-label" for="settings-year">默认年份</label>
+            <input
+              id="settings-year"
+              v-model="form.year"
+              class="field-input field-input--compact"
+              type="number"
+              min="1968"
+              max="2100"
+              inputmode="numeric"
+            />
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="settings-season">默认季度</label>
+            <select id="settings-season" v-model="form.season" class="field-select">
+              <option value="">不限</option>
+              <option value="1">冬（1 月）</option>
+              <option value="2">春（4 月）</option>
+              <option value="3">夏（7 月）</option>
+              <option value="4">秋（10 月）</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="settings-page-size">每页数量</label>
+            <input
+              id="settings-page-size"
+              v-model="form.pageSize"
+              class="field-input field-input--compact"
+              type="number"
+              min="12"
+              max="96"
+              inputmode="numeric"
+            />
+          </div>
+        </div>
+        <p class="group-footer">进入导视与搜索页时的默认年份、季度与每页条数（12–96）。</p>
+      </section>
+
+      <!-- 安全 -->
+      <section class="settings-group">
+        <h2 class="group-header">安全</h2>
+        <div class="group-card">
+          <div class="field-row">
+            <label class="field-label" for="settings-current-password">当前密码</label>
+            <input
+              id="settings-current-password"
+              v-model="form.currentPassword"
+              class="field-input"
+              type="password"
+              placeholder="请输入当前密码"
+              autocomplete="current-password"
+            />
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="settings-new-password">新密码</label>
+            <input
+              id="settings-new-password"
+              v-model="form.newPassword"
+              class="field-input"
+              type="password"
+              placeholder="至少 6 位"
+              autocomplete="new-password"
+            />
+          </div>
+          <div class="field-row">
+            <label class="field-label" for="settings-confirm-password">确认新密码</label>
+            <input
+              id="settings-confirm-password"
+              v-model="form.confirmPassword"
+              class="field-input"
+              type="password"
+              placeholder="再次输入新密码"
+              autocomplete="new-password"
+            />
+          </div>
+        </div>
+        <p v-if="requiresPasswordChange" class="group-footer group-footer--attention">
+          当前仍在使用默认管理员账号密码，建议尽快修改。
+        </p>
+        <p v-else class="group-footer">留空则不修改密码；修改时需验证当前密码。</p>
+      </section>
+
+      <p v-if="errorMessage" class="settings-error" role="alert">{{ errorMessage }}</p>
+
+      <button type="submit" class="save-button" :disabled="saving">
+        {{ saving ? '保存中…' : '保存' }}
+      </button>
+    </form>
+
+    <!-- 轻量 toast 提示 -->
+    <Transition name="toast">
+      <div v-if="toastMessage" class="settings-toast frosted" role="status">{{ toastMessage }}</div>
+    </Transition>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { RefreshRight } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 
-import { sourceLabel } from '../animePresentation'
+import EmptyState from '../components/EmptyState.vue'
+import NavBar from '../components/NavBar.vue'
 import { useAuthSession } from '../auth'
-import { clearCoverCache, getSettings, resetCollectionData as resetCollectionDataRequest, updateSettings } from '../services/settingsService'
-import {
-  loadTagLibrary as loadManagedTags,
-  resetTagLibrary as resetStoredManagedTags,
-  saveTagLibrary as saveManagedTags,
-  type TagLibraryKind,
-} from '../tagLibrary'
+import { fetchAppSettings, updateAppSettings } from '../services/settingsService'
+import type { AppSettingsUpdatePayload } from '../services/settingsService'
 import type { AppSettings } from '../types'
 
-const router = useRouter()
 const session = useAuthSession()
-const loading = ref(false)
+
+const loading = ref(true)
+const loadError = ref(false)
 const saving = ref(false)
-const clearingCache = ref(false)
-const resettingCollectionData = ref(false)
-const currentAdminUsername = ref('admin')
-const settingsSnapshot = ref<AppSettings | null>(null)
-const releaseTagLibrary = ref<string[]>(loadManagedTags('release'))
-const groupTagLibrary = ref<string[]>(loadManagedTags('group'))
-const releaseTagDraft = ref('')
-const groupTagDraft = ref('')
+const errorMessage = ref('')
+const settings = ref<AppSettings | null>(null)
+
 const form = reactive({
-  anime_source: 'youranimes' as AppSettings['anime_source'],
-  admin_username: 'admin',
-  current_password: '',
-  new_password: ''
+  appName: '',
+  year: '',
+  season: '',
+  pageSize: '',
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
 })
 
-const activeSourceLabel = computed(() => sourceLabel(form.anime_source))
-const activeSourceBaseUrl = computed(() => {
-  if (!settingsSnapshot.value) return '-'
-  return form.anime_source === 'mikan' ? settingsSnapshot.value.mikan_base_url : settingsSnapshot.value.youranimes_base_url
-})
-const updatedAtLabel = computed(() => {
-  if (!settingsSnapshot.value?.updated_at) return '-'
-  return new Date(settingsSnapshot.value.updated_at).toLocaleString()
-})
-const passwordStatusLabel = computed(() => {
-  if (!settingsSnapshot.value) return '-'
-  return settingsSnapshot.value.requires_password_change ? '仍在使用默认密码' : '已启用自定义密码'
-})
-const coverCacheSizeLabel = computed(() => formatBytes(settingsSnapshot.value?.cover_cache_total_bytes || 0))
-const tagLibraryLabels: Record<TagLibraryKind, string> = {
-  release: '资源标签',
-  group: '字幕组标签'
-}
+const toastMessage = ref('')
+let toastTimer: number | undefined
 
-function applySnapshot(settings: AppSettings) {
-  settingsSnapshot.value = settings
-  currentAdminUsername.value = settings.admin_username
-  form.anime_source = settings.anime_source
-  form.admin_username = settings.admin_username
-  form.current_password = ''
-  form.new_password = ''
-}
+/** 是否仍在使用默认账号密码（提示尽快修改） */
+const requiresPasswordChange = computed(() => settings.value?.requires_password_change ?? false)
 
-function formatBytes(value: number) {
-  if (value <= 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB']
-  let size = value
-  let unitIndex = 0
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex += 1
-  }
-  return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`
+/** 当前启用数据源的访问地址（只读展示） */
+const dataSourceUrl = computed(
+  () =>
+    (settings.value?.anime_source === 'mikan'
+      ? settings.value.mikan_base_url
+      : settings.value?.youranimes_base_url) || '—'
+)
+
+const dataSourceName = computed(() =>
+  settings.value?.anime_source === 'mikan' ? 'mikan' : 'youranimes'
+)
+
+function applySettings(next: AppSettings) {
+  settings.value = next
+  form.appName = next.app_name
+  form.year = String(next.default_search_year)
+  form.season = next.default_search_season === null ? '' : String(next.default_search_season)
+  form.pageSize = String(next.default_page_size)
 }
 
 async function load() {
   loading.value = true
+  loadError.value = false
   try {
-    const settings = await getSettings()
-    session.applySettings(settings)
-    applySnapshot(settings)
-    releaseTagLibrary.value = loadManagedTags('release')
-    groupTagLibrary.value = loadManagedTags('group')
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '加载设置失败')
+    applySettings(await fetchAppSettings())
+  } catch {
+    loadError.value = true
   } finally {
     loading.value = false
   }
 }
 
-function getTagLibraryRef(kind: TagLibraryKind) {
-  return kind === 'release' ? releaseTagLibrary : groupTagLibrary
-}
-
-function getTagDraftRef(kind: TagLibraryKind) {
-  return kind === 'release' ? releaseTagDraft : groupTagDraft
-}
-
-function addManagedTag(kind: TagLibraryKind) {
-  const draftRef = getTagDraftRef(kind)
-  const libraryRef = getTagLibraryRef(kind)
-  const value = draftRef.value.trim()
-  if (!value) {
-    ElMessage.warning(`请输入${tagLibraryLabels[kind]}`)
-    return
+/** 解析后端 400 响应中的 detail 文本，避免直接展示原始 JSON */
+function extractErrorMessage(error: unknown): string {
+  if (!(error instanceof Error) || !error.message) {
+    return '保存失败，请重试'
   }
-
-  const next = saveManagedTags(kind, [...libraryRef.value, value])
-  if (next.length === libraryRef.value.length) {
-    ElMessage.info(`${tagLibraryLabels[kind]}已存在`)
-    return
-  }
-
-  libraryRef.value = next
-  draftRef.value = ''
-  ElMessage.success(`已添加${tagLibraryLabels[kind]}`)
-}
-
-function removeManagedTag(kind: TagLibraryKind, tag: string) {
-  const libraryRef = getTagLibraryRef(kind)
-  libraryRef.value = saveManagedTags(kind, libraryRef.value.filter((item) => item !== tag))
-  ElMessage.success(`已移除${tag}`)
-}
-
-function resetManagedTags(kind: TagLibraryKind) {
-  const libraryRef = getTagLibraryRef(kind)
-  libraryRef.value = resetStoredManagedTags(kind)
-  ElMessage.success(`已恢复默认${tagLibraryLabels[kind]}`)
-}
-
-async function clearCache() {
   try {
-    await ElMessageBox.confirm('这会删除本地封面缓存文件，并重置所有指向本地缓存的封面引用。番剧条目、收藏记录和同步映射不会被删除。是否继续？', '确认清理封面缓存', {
-      type: 'warning',
-      confirmButtonText: '继续清理',
-      cancelButtonText: '取消'
-    })
-  } catch {
-    return
-  }
-
-  clearingCache.value = true
-  try {
-    const result = await clearCoverCache()
-    await load()
-    ElMessage.success(`已清理 ${result.deleted_files} 个缓存文件，释放 ${formatBytes(result.deleted_bytes)}，并重置 ${result.reset_cover_urls} 条封面记录`)
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '清理缓存失败')
-  } finally {
-    clearingCache.value = false
-  }
-}
-
-async function resetCollectionData() {
-  try {
-    await ElMessageBox.confirm(
-      '这会清空收藏管理中的本地收藏记录，包括整理状态、资源标签、字幕组标签和备注，但不会删除番剧库条目、封面缓存或同步映射。是否继续？',
-      '确认重置收藏数据',
-      {
-        type: 'warning',
-        confirmButtonText: '继续',
-        cancelButtonText: '取消'
-      }
-    )
-    await ElMessageBox.confirm(
-      '该操作不可撤销。重置后，收藏页中的所有本地整理信息都会被清空。是否确认执行重置？',
-      '二次确认',
-      {
-        type: 'error',
-        confirmButtonText: '确认重置',
-        cancelButtonText: '取消'
-      }
-    )
-  } catch {
-    return
-  }
-
-  resettingCollectionData.value = true
-  try {
-    const result = await resetCollectionDataRequest()
-    await load()
-    ElMessage.success(`已清理 ${result.deleted_collections} 条收藏记录`)
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '重置收藏数据失败')
-  } finally {
-    resettingCollectionData.value = false
-  }
-}
-
-async function submit() {
-  const previousSource = settingsSnapshot.value?.anime_source
-  const sourceChanged = Boolean(previousSource && previousSource !== form.anime_source)
-  if (sourceChanged) {
-    try {
-      await ElMessageBox.confirm(
-        `即将切换到 ${activeSourceLabel.value}。保存后会清空当前番剧库条目并清理本地封面缓存，避免不同源的数据继续混用。切换完成后，请重新执行一次“搜索并更新”从新源拉取数据。是否继续？`,
-        '确认切换数据源',
-        {
-          type: 'warning',
-          confirmButtonText: '继续切换',
-          cancelButtonText: '取消'
-        }
-      )
-    } catch {
-      return
+    const parsed = JSON.parse(error.message) as { detail?: unknown }
+    if (typeof parsed.detail === 'string') {
+      return parsed.detail
     }
+  } catch {
+    // 非 JSON 报文则原样展示
+  }
+  return error.message
+}
+
+function showToast(message: string) {
+  toastMessage.value = message
+  window.clearTimeout(toastTimer)
+  toastTimer = window.setTimeout(() => {
+    toastMessage.value = ''
+  }, 2400)
+}
+
+/** 前端表单校验，返回错误文案；通过则返回空字符串 */
+function validate(): string {
+  if (!form.appName.trim()) {
+    return '应用名不能为空'
+  }
+
+  const year = Number(form.year)
+  if (!Number.isInteger(year) || year < 1968 || year > 2100) {
+    return '默认年份需在 1968–2100 之间'
+  }
+
+  const pageSize = Number(form.pageSize)
+  if (!Number.isInteger(pageSize) || pageSize < 12 || pageSize > 96) {
+    return '每页数量需在 12–96 之间'
+  }
+
+  if (form.currentPassword || form.newPassword || form.confirmPassword) {
+    if (!form.currentPassword) {
+      return '修改密码前请输入当前密码'
+    }
+    if (form.newPassword.length < 6) {
+      return '新密码至少需要 6 位'
+    }
+    if (form.newPassword !== form.confirmPassword) {
+      return '两次输入的新密码不一致'
+    }
+  }
+
+  return ''
+}
+
+async function save() {
+  if (loading.value || saving.value) {
+    return
+  }
+
+  errorMessage.value = ''
+  const invalidMessage = validate()
+  if (invalidMessage) {
+    errorMessage.value = invalidMessage
+    return
+  }
+
+  const payload: AppSettingsUpdatePayload = {
+    app_name: form.appName.trim(),
+    default_search_year: Number(form.year),
+    default_search_season: form.season ? Number(form.season) : null,
+    default_page_size: Number(form.pageSize)
+  }
+
+  // 仅在用户填写了密码时才提交改密字段
+  if (form.currentPassword && form.newPassword) {
+    payload.current_password = form.currentPassword
+    payload.new_password = form.newPassword
   }
 
   saving.value = true
   try {
-    const previousUsername = currentAdminUsername.value
-    const requireRelogin = Boolean(form.new_password) || form.admin_username !== previousUsername
-    const settings = await updateSettings({
-      anime_source: form.anime_source,
-      admin_username: form.admin_username,
-      current_password: form.current_password || undefined,
-      new_password: form.new_password || undefined
-    })
-    session.applySettings(settings)
-    applySnapshot(settings)
-    const successMessage = requireRelogin
-      ? '设置已保存，请重新登录'
-      : sourceChanged
-        ? '设置已保存，番剧库和本地封面缓存已按新数据源重置'
-        : '设置已保存并生效'
-    ElMessage.success(successMessage)
-
-    if (requireRelogin) {
-      await session.logout()
-      await router.replace('/login')
-    }
+    applySettings(await updateAppSettings(payload))
+    form.currentPassword = ''
+    form.newPassword = ''
+    form.confirmPassword = ''
+    showToast('已保存')
+    // 刷新会话状态，让侧边栏应用名同步更新
+    session.ensureStatus(true).catch(() => undefined)
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '保存设置失败')
+    errorMessage.value = extractErrorMessage(error)
   } finally {
     saving.value = false
   }
 }
 
-onMounted(() => {
-  void load()
+onMounted(load)
+
+onBeforeUnmount(() => {
+  window.clearTimeout(toastTimer)
 })
 </script>
 
 <style scoped>
-.settings-page {
-  display: grid;
-  gap: 22px;
+.page {
+  padding-bottom: 24px;
 }
 
-.settings-hero {
-  position: relative;
+.loading-section {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 28px clamp(240px, 34vw, 360px) 28px 30px;
-  overflow: hidden;
-  isolation: isolate;
-  background: var(--hero-surface);
-  border: 1px solid var(--surface-line);
-  border-radius: 28px;
-  box-shadow: var(--elevation-hero);
+  justify-content: center;
+  padding: 96px 0;
 }
 
-.settings-hero::before {
-  position: absolute;
-  inset: 14px 12px 10px auto;
-  width: min(40%, 280px);
-  background-image: var(--hero-settings-image);
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-position: right center;
-  content: '';
-  pointer-events: none;
-  opacity: 0.96;
-  z-index: 0;
+.loading-spinner {
+  width: 26px;
+  height: 26px;
+  border: 2.5px solid var(--fill);
+  border-top-color: var(--accent);
+  border-radius: 999px;
+  animation: settings-spinner-rotate 0.8s linear infinite;
 }
 
-.settings-hero::after {
-  position: absolute;
-  inset: auto -6% -34% auto;
-  width: 300px;
-  height: 300px;
-  background: var(--hero-art-glow);
-  content: '';
-  pointer-events: none;
+@keyframes settings-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.settings-hero > * {
-  position: relative;
-  z-index: 1;
+.state-section {
+  display: flex;
+  flex-direction: column;
 }
 
-.settings-eyebrow,
-.settings-label {
-  margin: 0;
+.retry-button {
+  align-self: center;
+  margin-top: -36px;
+  padding: 8px 32px;
+  border-radius: 999px;
+  background: var(--fill);
   color: var(--accent);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.settings-hero h1,
-.settings-card-copy h2 {
-  margin: 0;
-}
-
-.settings-hero p:last-child,
-.settings-card-copy p:last-child,
-.metric-card span,
-.settings-readonly span,
-.strategy-option p,
-.switch-row span {
-  color: var(--text-muted);
-}
-
-.settings-refresh {
-  border-radius: 16px;
-}
-
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-}
-
-.settings-card {
-  display: grid;
-  gap: 18px;
-  padding: 24px;
-  background: var(--surface-card);
-  border: 1px solid var(--surface-line);
-  border-radius: 24px;
-  box-shadow: var(--elevation-card);
-}
-
-.settings-card--wide {
-  grid-column: 1 / -1;
-}
-
-.settings-card-copy {
-  display: grid;
-  gap: 6px;
-}
-
-.settings-form {
-  display: grid;
-}
-
-.settings-form--security {
-  gap: 2px;
-}
-
-.tag-manager-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.tag-manager-panel {
-  display: grid;
-  gap: 14px;
-  padding: 18px;
-  background: var(--surface-card-soft);
-  border: 1px solid rgba(144, 173, 214, 0.12);
-  border-radius: 20px;
-}
-
-.tag-manager-heading {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.tag-manager-copy {
-  display: grid;
-  gap: 4px;
-}
-
-.tag-manager-copy h3,
-.tag-manager-copy p {
-  margin: 0;
-}
-
-.tag-manager-copy h3 {
-  color: var(--text-strong);
-  font-size: 18px;
-}
-
-.tag-manager-copy p,
-.tag-chip-empty {
-  color: var(--text-muted);
-  line-height: 1.65;
-}
-
-.tag-manager-reset {
-  min-height: 40px;
-  padding-inline: 0;
-  color: var(--tag-manager-muted-text);
-}
-
-.tag-manager-reset:hover,
-.tag-manager-reset:focus-visible {
-  color: var(--text-soft);
-}
-
-.tag-manager-entry {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-}
-
-.tag-manager-add {
-  min-width: 96px;
-  min-height: 46px;
-  color: var(--text-soft);
-  background: var(--tag-manager-add-bg);
-  border-color: var(--tag-manager-add-border);
-}
-
-.tag-manager-add:hover,
-.tag-manager-add:focus-visible {
-  color: var(--text-strong);
-  background: var(--tag-manager-add-hover-bg);
-  border-color: var(--tag-manager-add-hover-border);
-}
-
-.tag-chip-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tag-chip-list :deep(.el-tag) {
-  min-height: 40px;
-  padding-inline: 14px;
-  color: var(--text-soft);
-  background: var(--tag-manager-chip-bg);
-  border-color: var(--tag-manager-chip-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-}
-
-.tag-chip-list :deep(.el-tag.el-tag--primary) {
-  color: var(--tag-manager-chip-primary-text);
-  background: var(--tag-manager-chip-primary-bg);
-  border-color: var(--tag-manager-chip-primary-border);
-}
-
-.tag-chip-list :deep(.el-tag.el-tag--info) {
-  color: var(--tag-manager-chip-info-text);
-  background: var(--tag-manager-chip-info-bg);
-  border-color: var(--tag-manager-chip-info-border);
-}
-
-.tag-chip-list :deep(.el-tag__close) {
-  color: currentColor;
-  background: transparent;
-}
-
-.tag-chip-list :deep(.el-tag__close:hover) {
-  color: var(--text-strong);
-  background: var(--button-text-hover-bg);
-}
-
-.tag-chip-empty {
-  padding: 14px 16px;
-  background: var(--tag-manager-empty-bg);
-  border: 1px dashed var(--tag-manager-empty-border);
-  border-radius: 16px;
-  font-size: 13px;
-}
-
-.settings-inline-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.settings-inline-grid--triple {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.settings-account-stack {
-  display: grid;
-  gap: 18px;
-}
-
-.settings-account-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.settings-account-summary-card {
-  min-height: 96px;
-  align-content: center;
-}
-
-.settings-account-note {
-  display: grid;
-  grid-column: 1 / -1;
-  gap: 6px;
-  padding: 16px 18px;
-  background: var(--surface-card-soft);
-  border: 1px solid var(--panel-soft-border);
-  border-radius: 18px;
-}
-
-.settings-account-note-label,
-.settings-account-note p {
-  margin: 0;
-}
-
-.settings-account-note-label {
-  color: var(--text-strong);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.settings-account-note p {
-  color: var(--text-muted);
-  line-height: 1.65;
-}
-
-.settings-account-fields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.settings-account-field--wide {
-  grid-column: 1 / -1;
-}
-
-.settings-account-fields :deep(.el-form-item) {
-  margin-bottom: 0;
-}
-
-.sync-strategy-group {
-  display: grid;
-  gap: 12px;
-}
-
-.strategy-option {
-  display: grid;
-  gap: 8px;
-  padding: 16px;
-  background: var(--surface-card-soft);
-  border: 1px solid var(--panel-soft-border);
-  border-radius: 18px;
-}
-
-.strategy-option--active {
-  border-color: var(--notice-info-border);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--notice-info-border) 65%, transparent) inset;
-}
-
-.strategy-option p {
-  margin: 0;
-  line-height: 1.65;
-}
-
-.switch-row {
-  display: inline-flex;
-  gap: 12px;
-  align-items: center;
-  min-height: 46px;
-  padding: 0 14px;
-  background: var(--surface-card-soft);
-  border: 1px solid var(--panel-soft-border);
-  border-radius: 18px;
-}
-
-.maintenance-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.metric-card,
-.settings-readonly {
-  display: grid;
-  gap: 4px;
-  padding: 14px 16px;
-  background: var(--surface-card-soft);
-  border: 1px solid var(--panel-soft-border);
-  border-radius: 18px;
-}
-
-.metric-card strong,
-.settings-readonly strong {
-  color: var(--text-strong);
-}
-
-.settings-readonly--danger {
-  border-color: var(--danger-panel-border);
-  background: var(--danger-panel-bg);
-}
-
-.maintenance-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: flex-start;
-}
-
-.maintenance-reset {
-  color: var(--danger-button-text);
-  background: var(--danger-button-bg);
-  border-color: var(--danger-button-border);
-}
-
-.maintenance-reset:hover,
-.maintenance-reset:focus-visible {
-  color: var(--text-strong);
-  border-color: var(--danger-button-hover-border);
-  background: var(--danger-button-hover-bg);
-}
-
-.settings-actions {
-  position: sticky;
-  bottom: 18px;
-  z-index: 12;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: var(--action-bar-bg);
-  border: 1px solid var(--surface-line);
-  border-radius: 22px;
-  box-shadow: var(--elevation-card);
-  backdrop-filter: blur(14px);
-}
-
-.settings-cancel,
-.settings-submit {
-  min-width: 148px;
-  height: 50px;
-  border-radius: 18px;
-  font-weight: 700;
-}
-
-.settings-cancel {
-  border-color: var(--surface-line-strong);
-}
-
-.settings-submit {
-  color: var(--action-primary-text);
-  border: none;
-  background: var(--action-primary-bg);
-  box-shadow: var(--action-primary-shadow);
-}
-
-.settings-submit:hover,
-.settings-submit:focus-visible {
-  transform: translateY(-1px);
-  box-shadow: var(--action-primary-shadow-hover);
-}
-
-.settings-form :deep(.el-input__wrapper),
-.settings-form :deep(.el-select__wrapper),
-.settings-form :deep(.el-textarea__inner),
-.settings-form :deep(.el-input-number) {
-  border-radius: 16px;
-  background: var(--surface-input);
-  box-shadow: 0 0 0 1px var(--surface-line) inset;
-}
-
-.settings-form :deep(.el-input__wrapper),
-.settings-form :deep(.el-select__wrapper) {
-  min-height: 48px;
-}
-
-.tag-manager-panel :deep(.el-input__wrapper) {
-  min-height: 48px;
-  border-radius: 16px;
-  background: var(--surface-input);
-  box-shadow: 0 0 0 1px var(--surface-line) inset;
-}
-
-.tag-manager-panel :deep(.el-button),
-.tag-manager-panel :deep(.el-tag) {
-  border-radius: 14px;
-}
-
-.sync-strategy-group :deep(.el-radio__label) {
-  color: var(--text-strong);
+  font-size: 15px;
   font-weight: 600;
+  transition: opacity 200ms ease;
 }
 
-@media (max-width: 1080px) {
-  .settings-hero {
-    padding-right: 30px;
-  }
-
-  .settings-hero::before {
-    width: 180px;
-    opacity: 0.28;
-  }
-
-  .settings-grid,
-  .settings-inline-grid,
-  .settings-inline-grid--triple,
-  .settings-account-summary,
-  .settings-account-fields,
-  .maintenance-metrics,
-  .tag-manager-grid {
-    grid-template-columns: 1fr;
-  }
+.retry-button:active {
+  opacity: 0.6;
 }
 
-@media (max-width: 720px) {
-  .settings-actions {
-    flex-direction: column;
-    align-items: stretch;
-    bottom: 12px;
+/* iOS inset-grouped 分组表单 */
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 16px 0;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.group-header {
+  margin: 10px 14px 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.group-card {
+  background: var(--bg-elevated);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 52px;
+  padding: 8px 18px;
+}
+
+.field-row + .field-row {
+  border-top: 1px solid var(--separator);
+}
+
+.field-label {
+  flex-shrink: 0;
+  width: 96px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.field-input {
+  width: min(320px, 100%);
+  height: 38px;
+  margin-left: auto;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--fill);
+  color: var(--text-primary);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 200ms ease;
+}
+
+.field-input--compact {
+  width: 132px;
+}
+
+.field-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.field-input:focus {
+  border-color: var(--accent);
+}
+
+.field-select {
+  width: 168px;
+  height: 38px;
+  margin-left: auto;
+  padding: 0 30px 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--fill);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 14px 14px;
+  appearance: none;
+  color: var(--text-primary);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 200ms ease;
+}
+
+.field-select:focus {
+  border-color: var(--accent);
+}
+
+/* 只读信息行 */
+.field-value {
+  margin-left: auto;
+  max-width: min(360px, 100%);
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: right;
+  word-break: break-all;
+}
+
+.source-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: 1px;
+  word-break: keep-all;
+}
+
+.group-footer {
+  margin: 7px 14px 0;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.group-footer--attention {
+  color: var(--text-secondary);
+}
+
+.settings-error {
+  margin: 12px 2px 0;
+  color: #ff3b30;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.save-button {
+  height: 44px;
+  margin-top: 16px;
+  align-self: center;
+  width: min(320px, 100%);
+  border-radius: 12px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  transition: opacity 200ms ease;
+}
+
+.save-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.save-button:not(:disabled):active {
+  opacity: 0.8;
+}
+
+/* 轻量 toast */
+.settings-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 76px);
+  transform: translateX(-50%);
+  z-index: 200;
+  max-width: 78vw;
+  padding: 10px 22px;
+  border-radius: 999px;
+  box-shadow: var(--card-shadow);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition:
+    opacity 240ms ease,
+    transform 240ms ease;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 8px);
+}
+
+/* 桌面端：表单列加宽间距更从容 */
+@media (min-width: 1024px) {
+  .settings-section {
+    padding-top: 12px;
   }
 
-  .settings-cancel,
-  .settings-submit {
-    width: 100%;
+  .group-header {
+    margin-top: 18px;
   }
 
-  .tag-manager-entry {
-    grid-template-columns: 1fr;
+  .field-row {
+    min-height: 56px;
   }
 }
 </style>

@@ -8,11 +8,8 @@ class CollectionOut(BaseModel):
     id: int
     user_id: str
     anime_id: int
-    organize_status: Literal["pending", "emby"]
-    note: str | None
-    release_tags: list[str]
-    group_tags: list[str]
-    updated_at: datetime | None = None
+    emby_organized: bool = False
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -36,10 +33,45 @@ class AnimeOut(BaseModel):
     tags: str | None
     pv_url: str | None
     cover_url: str | None
+    series_key: str
+    series_title: str
+    season_label: str | None
     detail_refreshing: bool = False
-    collection_item: CollectionOut | None = None
+    is_collected: bool = False
+    emby_organized: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class SeasonSummaryOut(BaseModel):
+    year: int
+    season: int
+    count: int
+
+
+class SeriesGroupOut(BaseModel):
+    series_key: str
+    series_title: str
+    entry_count: int
+    latest_year: int
+    latest_season: int
+    cover_url: str | None
+    entries: list[AnimeOut]
+
+
+class SourceSearchResultOut(BaseModel):
+    source_id: str
+    title: str
+    title_jp: str | None = None
+    cover_url: str | None = None
+    source_url: str | None = None
+
+
+class SourceSearchOut(BaseModel):
+    items: list[SourceSearchResultOut]
+    total: int
+    page: int
+    page_size: int
 
 
 class PaginatedAnime(BaseModel):
@@ -120,6 +152,21 @@ class CollectionResetActionOut(BaseModel):
     remaining_collections: int
 
 
+class AppLogOut(BaseModel):
+    id: int
+    level: str
+    source: str
+    message: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PaginatedAppLogs(BaseModel):
+    items: list[AppLogOut]
+    total: int
+
+
 class AppSettingsUpdate(BaseModel):
     app_name: str | None = None
     library_subcopy: str | None = None
@@ -156,27 +203,10 @@ class AppSettingsUpdate(BaseModel):
 
 class CollectionCreate(BaseModel):
     anime_id: int
-    organize_status: Literal["pending", "emby"] = "pending"
-    note: str | None = None
-    release_tags: list[str] | None = None
-    group_tags: list[str] | None = None
-
-    @field_validator("release_tags", "group_tags", mode="before")
-    @classmethod
-    def normalize_tag_values(cls, value: str | list[str] | None) -> list[str] | None:
-        return _normalize_tag_list(value)
 
 
-class CollectionUpdate(BaseModel):
-    organize_status: Literal["pending", "emby"] | None = None
-    note: str | None = None
-    release_tags: list[str] | None = None
-    group_tags: list[str] | None = None
-
-    @field_validator("release_tags", "group_tags", mode="before")
-    @classmethod
-    def normalize_tag_values(cls, value: str | list[str] | None) -> list[str] | None:
-        return _normalize_tag_list(value)
+class EmbyOrganizedUpdate(BaseModel):
+    emby_organized: bool
 
 
 class AnimeSearchRequest(BaseModel):
@@ -213,24 +243,17 @@ class MappingOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class TagUsageOut(BaseModel):
-    value: str
-    count: int
+class ImportRequest(BaseModel):
+    source_id: str
+
+    @field_validator("source_id")
+    @classmethod
+    def source_id_must_not_be_empty(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("source_id cannot be empty")
+        return stripped
 
 
-class TagSummaryOut(BaseModel):
-    release: list[TagUsageOut]
-    group: list[TagUsageOut]
-
-
-def _normalize_tag_list(value: str | list[str] | None) -> list[str] | None:
-    if value is None:
-        return None
-    if isinstance(value, str):
-        values = value.split(',')
-    else:
-        values = value
-
-    normalized = [item.strip() for item in values if isinstance(item, str) and item.strip()]
-    unique_values = list(dict.fromkeys(normalized))
-    return unique_values or []
+class ImportOut(BaseModel):
+    anime_id: int

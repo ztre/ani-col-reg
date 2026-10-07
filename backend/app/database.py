@@ -1,4 +1,3 @@
-import json
 from collections.abc import Generator
 
 from sqlalchemy import create_engine, event, text
@@ -66,13 +65,91 @@ def _migrate_sqlite_schema() -> None:
         anime_columns = _table_columns(conn, "anime_master")
         if anime_columns and "cover_url" not in anime_columns:
             conn.execute(text("ALTER TABLE anime_master ADD COLUMN cover_url VARCHAR(1000)"))
+        if anime_columns and "series_key" not in anime_columns:
+            conn.execute(text("ALTER TABLE anime_master ADD COLUMN series_key VARCHAR(255) NOT NULL DEFAULT ''"))
+        if anime_columns and "series_title" not in anime_columns:
+            conn.execute(text("ALTER TABLE anime_master ADD COLUMN series_title VARCHAR(255) NOT NULL DEFAULT ''"))
+        if anime_columns and "season_label" not in anime_columns:
+            conn.execute(text("ALTER TABLE anime_master ADD COLUMN season_label VARCHAR(255)"))
+        if anime_columns:
+            conn.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_anime_master_series_key ON anime_master (series_key)")
+            )
+            _backfill_series_columns(conn)
 
         collection_columns = _table_columns(conn, "collection_item")
-        if collection_columns and _collection_table_needs_rebuild(conn, collection_columns):
+        if collection_columns and _collection_table_needs_rebuild(collection_columns):
             _rebuild_collection_table(conn, collection_columns)
+            collection_columns = _table_columns(conn, "collection_item")
+        if collection_columns and "emby_organized" not in collection_columns:
+            conn.execute(
+                text("ALTER TABLE collection_item ADD COLUMN emby_organized BOOLEAN NOT NULL DEFAULT 0")
+            )
 
         if _table_columns(conn, "sync_job"):
             conn.execute(text("DROP TABLE sync_job"))
+
+        _migrate_series_algorithm(conn)
+
+
+def _migrate_series_algorithm(conn) -> None:
+    """系列归一化算法升级时，用 user_version 标记并对存量行全量重算。"""
+    from app.services.series import SERIES_ALGORITHM_VERSION
+
+    current_version = conn.execute(text("PRAGMA user_version")).scalar() or 0
+    if current_version >= SERIES_ALGORITHM_VERSION:
+        return
+
+    from app.services.series import extract_series_info
+
+    rows = conn.execute(text("SELECT id, title_cn FROM anime_master")).mappings().all()
+    for row in rows:
+        info = extract_series_info(row["title_cn"] or "")
+        conn.execute(
+            text(
+                """
+                UPDATE anime_master
+                SET series_key = :series_key,
+                    series_title = :series_title,
+                    season_label = :season_label
+                WHERE id = :id
+                """
+            ),
+            {
+                "series_key": info.series_key,
+                "series_title": info.series_title,
+                "season_label": info.season_label,
+                "id": row["id"],
+            },
+        )
+    conn.execute(text(f"PRAGMA user_version = {SERIES_ALGORITHM_VERSION}"))
+
+
+def _backfill_series_columns(conn) -> None:
+    from app.services.series import extract_series_info
+
+    rows = conn.execute(
+        text("SELECT id, title_cn FROM anime_master WHERE series_key IS NULL OR series_key = ''")
+    ).mappings().all()
+    for row in rows:
+        info = extract_series_info(row["title_cn"] or "")
+        conn.execute(
+            text(
+                """
+                UPDATE anime_master
+                SET series_key = :series_key,
+                    series_title = :series_title,
+                    season_label = :season_label
+                WHERE id = :id
+                """
+            ),
+            {
+                "id": row["id"],
+                "series_key": info.series_key,
+                "series_title": info.series_title,
+                "season_label": info.season_label,
+            },
+        )
 
 
 def _table_columns(conn, table_name: str) -> set[str]:
@@ -80,30 +157,27 @@ def _table_columns(conn, table_name: str) -> set[str]:
     return {row["name"] for row in rows}
 
 
-def _collection_table_needs_rebuild(conn, columns: set[str]) -> bool:
-    required = {"id", "user_id", "anime_id", "organize_status", "note", "release_tags", "group_tags", "created_at", "updated_at"}
-    removed = {"status", "score", "favorite_reason", "favorite_level", "tags"}
-    if bool(required - columns) or bool(removed & columns):
-        return True
-
-    column_types = {
-        row["name"]: (row["type"] or "").upper()
-        for row in conn.execute(text("PRAGMA table_info(collection_item)")).mappings().all()
+def _collection_table_needs_rebuild(columns: set[str]) -> bool:
+    required = {"id", "user_id", "anime_id", "created_at"}
+    # TODO(后续任务重写): organize_status/note/release_tags/group_tags 等列已从模型删除，仅在迁移期需要识别。
+    removed = {
+        "organize_status",
+        "note",
+        "release_tags",
+        "group_tags",
+        "updated_at",
+        "status",
+        "score",
+        "favorite_reason",
+        "favorite_level",
+        "tags",
     }
-    return column_types.get("release_tags") != "JSON" or column_types.get("group_tags") != "JSON"
+    return bool(required - columns) or bool(removed & columns)
 
 
 def _rebuild_collection_table(conn, columns: set[str]) -> None:
-    release_expr = "COALESCE(release_tags, '[]')" if "release_tags" in columns else "'[]'"
-    if "tags" in columns:
-        release_expr = f"COALESCE(release_tags, tags, '[]')" if "release_tags" in columns else "COALESCE(tags, '[]')"
-
     user_expr = "COALESCE(user_id, 'default')" if "user_id" in columns else "'default'"
-    organize_expr = "organize_status" if "organize_status" in columns else "'pending'"
-    note_expr = "note" if "note" in columns else "NULL"
-    group_expr = "COALESCE(group_tags, '[]')" if "group_tags" in columns else "'[]'"
     created_expr = "created_at" if "created_at" in columns else "CURRENT_TIMESTAMP"
-    updated_expr = "updated_at" if "updated_at" in columns else "CURRENT_TIMESTAMP"
 
     conn.execute(text("PRAGMA foreign_keys=OFF"))
     conn.execute(
@@ -113,12 +187,7 @@ def _rebuild_collection_table(conn, columns: set[str]) -> None:
                 id INTEGER NOT NULL PRIMARY KEY,
                 user_id VARCHAR(64) NOT NULL DEFAULT 'default',
                 anime_id INTEGER NOT NULL UNIQUE,
-                organize_status VARCHAR(32) NOT NULL DEFAULT 'pending',
-                note TEXT,
-                release_tags JSON NOT NULL DEFAULT '[]',
-                group_tags JSON NOT NULL DEFAULT '[]',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(anime_id) REFERENCES anime_master (id)
             )
             """
@@ -127,53 +196,15 @@ def _rebuild_collection_table(conn, columns: set[str]) -> None:
     conn.execute(
         text(
             f"""
-            INSERT INTO collection_item_new (
-                id, user_id, anime_id, organize_status, note, release_tags, group_tags, created_at, updated_at
-            )
-            SELECT id, {user_expr}, anime_id, {organize_expr}, {note_expr}, {release_expr}, {group_expr}, {created_expr}, {updated_expr}
+            INSERT INTO collection_item_new (id, user_id, anime_id, created_at)
+            SELECT id, {user_expr}, anime_id, {created_expr}
             FROM collection_item
             """
         )
     )
-    for row in conn.execute(text("SELECT id, release_tags, group_tags FROM collection_item_new")).mappings():
-        conn.execute(
-            text(
-                """
-                UPDATE collection_item_new
-                SET release_tags = :release_tags,
-                    group_tags = :group_tags
-                WHERE id = :id
-                """
-            ),
-            {
-                "id": row["id"],
-                "release_tags": json.dumps(_normalize_collection_tags(row["release_tags"])),
-                "group_tags": json.dumps(_normalize_collection_tags(row["group_tags"])),
-            },
-        )
     conn.execute(text("DROP TABLE collection_item"))
     conn.execute(text("ALTER TABLE collection_item_new RENAME TO collection_item"))
     conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collection_item_id ON collection_item (id)"))
     conn.execute(text("CREATE INDEX IF NOT EXISTS ix_collection_item_user_id ON collection_item (user_id)"))
     conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_collection_item_anime_id ON collection_item (anime_id)"))
     conn.execute(text("PRAGMA foreign_keys=ON"))
-
-
-def _normalize_collection_tags(raw_value) -> list[str]:
-    if raw_value is None:
-        return []
-    if isinstance(raw_value, str):
-        stripped = raw_value.strip()
-        if not stripped:
-            return []
-        if stripped.startswith('[') and stripped.endswith(']'):
-            try:
-                parsed = json.loads(stripped)
-            except json.JSONDecodeError:
-                parsed = None
-            if isinstance(parsed, list):
-                return [item.strip() for item in parsed if isinstance(item, str) and item.strip()]
-        return [item.strip() for item in stripped.split(',') if item.strip()]
-    if isinstance(raw_value, list):
-        return [item.strip() for item in raw_value if isinstance(item, str) and item.strip()]
-    return []

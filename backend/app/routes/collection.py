@@ -1,11 +1,20 @@
+from collections import defaultdict
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models import AnimeMapping, AnimeMaster, CollectionItem
-from app.routes.common import require_auth
-from app.schemas import CollectionCreate, CollectionOut, CollectionUpdate, MappingCreate, MappingOut
+from app.routes.common import build_series_group, require_auth
+from app.schemas import (
+    CollectionCreate,
+    CollectionOut,
+    EmbyOrganizedUpdate,
+    MappingCreate,
+    MappingOut,
+    SeriesGroupOut,
+)
 
 
 router = APIRouter(prefix='/api', dependencies=[Depends(require_auth)])
@@ -21,35 +30,49 @@ def create_collection(payload: CollectionCreate, db: Session = Depends(get_db)) 
     if item is None:
         item = CollectionItem(anime_id=payload.anime_id)
         db.add(item)
+        db.commit()
+        db.refresh(item)
+    return CollectionOut.model_validate(item)
 
-    apply_collection_payload(item, payload.model_dump(exclude_unset=True))
+
+@router.delete('/collection/anime/{anime_id}', status_code=204)
+def delete_collection(anime_id: int, db: Session = Depends(get_db)) -> None:
+    item = db.scalar(select(CollectionItem).where(CollectionItem.anime_id == anime_id))
+    if item is not None:
+        db.delete(item)
+        db.commit()
+
+
+@router.put('/collection/anime/{anime_id}/emby', response_model=CollectionOut)
+def set_emby_organized(
+    anime_id: int, payload: EmbyOrganizedUpdate, db: Session = Depends(get_db)
+) -> CollectionOut:
+    """标记/取消该季度在 Emby 中已整理。"""
+    item = db.scalar(select(CollectionItem).where(CollectionItem.anime_id == anime_id))
+    if item is None:
+        raise HTTPException(status_code=404, detail='Anime not collected')
+    item.emby_organized = payload.emby_organized
     db.commit()
     db.refresh(item)
     return CollectionOut.model_validate(item)
 
 
-@router.patch('/collection/{collection_id}', response_model=CollectionOut)
-def update_collection(collection_id: int, payload: CollectionUpdate, db: Session = Depends(get_db)) -> CollectionOut:
-    item = db.get(CollectionItem, collection_id)
-    if not item:
-        raise HTTPException(status_code=404, detail='Collection item not found')
+@router.get('/collection/series', response_model=list[SeriesGroupOut])
+def list_collection_series(db: Session = Depends(get_db)) -> list[SeriesGroupOut]:
+    rows = db.scalars(
+        select(AnimeMaster)
+        .options(joinedload(AnimeMaster.collection_item))
+        .join(CollectionItem, CollectionItem.anime_id == AnimeMaster.id)
+        .order_by(AnimeMaster.year.asc(), AnimeMaster.season.asc(), AnimeMaster.title_cn)
+    ).unique().all()
 
-    apply_collection_payload(item, payload.model_dump(exclude_unset=True))
-    db.commit()
-    db.refresh(item)
-    return CollectionOut.model_validate(item)
+    grouped: dict[str, list[AnimeMaster]] = defaultdict(list)
+    for anime in rows:
+        grouped[anime.series_key].append(anime)
 
-
-@router.delete('/collection/{collection_id}', response_model=CollectionOut)
-def delete_collection(collection_id: int, db: Session = Depends(get_db)) -> CollectionOut:
-    item = db.get(CollectionItem, collection_id)
-    if not item:
-        raise HTTPException(status_code=404, detail='Collection item not found')
-
-    deleted = CollectionOut.model_validate(item)
-    db.delete(item)
-    db.commit()
-    return deleted
+    groups = [build_series_group(entries) for entries in grouped.values()]
+    groups.sort(key=lambda group: (-group.latest_year, -group.latest_season, group.series_title))
+    return groups
 
 
 @router.post('/mapping/mgr-ani-ml', response_model=MappingOut)
@@ -73,8 +96,3 @@ def create_mapping(payload: MappingCreate, db: Session = Depends(get_db)) -> Map
     db.commit()
     db.refresh(mapping)
     return MappingOut.model_validate(mapping)
-
-
-def apply_collection_payload(item: CollectionItem, values: dict) -> None:
-    for key, value in values.items():
-        setattr(item, key, value)

@@ -1,0 +1,22 @@
+{
+  "name": "番剧收藏",
+  "short_name": "番剧收藏",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2f2f7",
+  "theme_color": "#f2f2f7",
+  "icons": [
+    {
+      "src": "/icons/icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

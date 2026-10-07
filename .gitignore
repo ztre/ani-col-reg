@@ -20,3 +20,5 @@ dist/
 
 #files
 doc/*md
+# Trae IDE
+.trae/

@@ -1,14 +1,3 @@
-export interface CollectionItem {
-  id: number
-  user_id: string
-  anime_id: number
-  organize_status: 'pending' | 'emby'
-  note: string | null
-  release_tags: string[]
-  group_tags: string[]
-  updated_at?: string | null
-}
-
 export interface Anime {
   id: number
   source: string
@@ -28,8 +17,13 @@ export interface Anime {
   tags: string | null
   pv_url: string | null
   cover_url: string | null
-  detail_refreshing?: boolean
-  collection_item: CollectionItem | null
+  detail_refreshing: boolean
+  series_key: string
+  series_title: string
+  season_label: string | null
+  is_collected: boolean
+  /** 该季度是否已在 Emby 中整理（媒体库归档标记） */
+  emby_organized: boolean
 }
 
 export interface PaginatedAnime {
@@ -39,27 +33,65 @@ export interface PaginatedAnime {
   page_size: number
 }
 
-export interface AuthUser {
-  username: string
+export interface SeasonSummary {
+  year: number
+  season: number
+  count: number
+}
+
+export interface SeriesGroup {
+  series_key: string
+  series_title: string
+  entry_count: number
+  latest_year: number
+  latest_season: number
+  cover_url: string | null
+  entries: Anime[]
+}
+
+/** 数据源搜索结果条目（YourAnimes 等源站实时检索，非本地库数据） */
+export interface SourceSearchItem {
+  source_id: string
+  title: string
+  title_jp: string | null
+  cover_url: string | null
+  source_url: string | null
+}
+
+export interface SourceSearchResult {
+  items: SourceSearchItem[]
+  total: number
+  page: number
+  page_size: number
+}
+
+/** 数据源条目导入结果：返回本地新建（或已存在）的番剧 id */
+export interface SourceImportResult {
+  anime_id: number
+}
+
+export interface CollectionItem {
+  id: number
+  user_id: string
+  anime_id: number
+  emby_organized: boolean
+  created_at: string
 }
 
 export interface AuthStatus {
   authenticated: boolean
-  user: AuthUser | null
+  user: { username: string } | null
   app_name: string
   library_subcopy: string
   default_search_year: number
   default_search_season: number | null
   default_page_size: number
-  default_filter_collected: boolean
-  default_filter_release_tag: string | null
-  default_filter_group_tag: string | null
   requires_password_change: boolean
 }
 
 export interface LoginResponse {
   token: string
-  user: AuthUser
+  user: { username: string }
   status: AuthStatus
 }
 
@@ -73,7 +105,7 @@ export interface AppSettings {
   default_filter_collected: boolean
   default_filter_release_tag: string | null
   default_filter_group_tag: string | null
-  sync_strategy: 'incremental' | 'replace-season'
+  sync_strategy: string
   admin_username: string
   youranimes_base_url: string
   mikan_base_url: string
@@ -84,31 +116,15 @@ export interface AppSettings {
   requires_password_change: boolean
 }
 
-export interface AppSettingsUpdate {
-  app_name?: string
-  library_subcopy?: string
-  anime_source?: 'youranimes' | 'mikan'
-  default_search_year?: number
-  default_search_season?: number | null
-  default_page_size?: number
-  default_filter_collected?: boolean
-  default_filter_release_tag?: string | null
-  default_filter_group_tag?: string | null
-  sync_strategy?: 'incremental' | 'replace-season'
-  admin_username?: string
-  current_password?: string
-  new_password?: string
+export interface AppLog {
+  id: number
+  level: string
+  source: string
+  message: string
+  created_at: string
 }
 
-export interface MaintenanceAction {
-  deleted_files: number
-  deleted_bytes: number
-  reset_cover_urls: number
-  remaining_files: number
-  remaining_bytes: number
-}
-
-export interface CollectionResetAction {
-  deleted_collections: number
-  remaining_collections: number
+export interface PaginatedAppLogs {
+  items: AppLog[]
+  total: number
 }

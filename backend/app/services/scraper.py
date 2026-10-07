@@ -64,6 +64,28 @@ class YourAnimesScraper:
             response.raise_for_status()
         return parse_detail_html(response.text, self.base_url, source_url, fallback=fallback)
 
+    async def search_source(self, tk: str, *, page: int = 1, size: int = 20) -> dict:
+        url = f"{self.base_url}/api/v1/animes"
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            response = await client.get(url, params={"tk": tk, "page": page, "size": size})
+            response.raise_for_status()
+
+        payload = response.json()
+        entries = payload.get("result") or []
+        items = [
+            {
+                "source_id": str(entry["_id"]),
+                "title": entry.get("name") or "",
+                "title_jp": entry.get("jpName"),
+                "cover_url": entry.get("cover"),
+                "source_url": f"{self.base_url}/animes/{entry['_id']}",
+            }
+            for entry in entries
+            if entry.get("_id")
+        ]
+        total = int((payload.get("metadata") or {}).get("total") or 0)
+        return {"items": items, "total": total}
+
 
 def parse_season_html(html: str, base_url: str, year: int, season: int) -> list[AnimeSourceRecord]:
     soup = BeautifulSoup(html, "html.parser")
@@ -265,6 +287,9 @@ def _section_text(soup: BeautifulSoup, labels: list[str]) -> str | None:
         if raw.startswith(label):
             raw = raw[len(label) :].strip(" ：:\n")
             break
+    # 防御：父容器文本过长说明 heading 匹配到了页面大容器，宁可放弃。
+    if len(raw) > 3000:
+        return None
     return raw or None
 
 

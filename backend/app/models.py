@@ -1,7 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
-from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -33,6 +32,9 @@ class AnimeMaster(Base):
     tags: Mapped[str | None] = mapped_column(Text)
     pv_url: Mapped[str | None] = mapped_column(String(1000))
     cover_url: Mapped[str | None] = mapped_column(String(1000))
+    series_key: Mapped[str] = mapped_column(String(255), index=True, default="")
+    series_title: Mapped[str] = mapped_column(String(255), default="")
+    season_label: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -47,12 +49,9 @@ class CollectionItem(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[str] = mapped_column(String(64), default="default", index=True)
     anime_id: Mapped[int] = mapped_column(ForeignKey("anime_master.id"), unique=True, index=True)
-    organize_status: Mapped[str] = mapped_column(String(32), default="pending")
-    note: Mapped[str | None] = mapped_column(Text)
-    release_tags: Mapped[list[str]] = mapped_column(MutableList.as_mutable(JSON), default=list)
-    group_tags: Mapped[list[str]] = mapped_column(MutableList.as_mutable(JSON), default=list)
+    # 该季度是否已在 Emby 中整理（媒体库归档标记）
+    emby_organized: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     anime: Mapped[AnimeMaster] = relationship(back_populates="collection_item")
 
@@ -82,3 +81,13 @@ class EpisodeProgress(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     anime: Mapped[AnimeMaster] = relationship(back_populates="progress")
+
+
+class AppLog(Base):
+    __tablename__ = "app_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, autoincrement=True)
+    level: Mapped[str] = mapped_column(String(16), index=True)
+    source: Mapped[str] = mapped_column(String(64), index=True)
+    message: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)

@@ -22,22 +22,6 @@ export default defineConfig(({ mode }) => {
               return
             }
 
-            if (id.includes('@element-plus/icons-vue')) {
-              return 'element-plus-icons'
-            }
-
-            if (id.includes('node_modules/element-plus/')) {
-              const componentPath = 'node_modules/element-plus/es/components/'
-              const componentIndex = id.indexOf(componentPath)
-
-              if (componentIndex >= 0) {
-                const componentName = id.slice(componentIndex + componentPath.length).split('/')[0]
-                return `element-plus-${componentName}`
-              }
-
-              return 'element-plus-core'
-            }
-
             if (id.includes('vue-router')) {
               return 'vue-router'
             }

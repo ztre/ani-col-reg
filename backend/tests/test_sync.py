@@ -31,7 +31,8 @@ def test_upsert_records_deduplicates_and_preserves_collection() -> None:
 
     anime = db.scalar(select(AnimeMaster).where(AnimeMaster.source_id == "alpha"))
     assert anime is not None
-    collection = CollectionItem(anime_id=anime.id, note="手工备注", release_tags=["BDRip"], group_tags=["ANi"])
+    # TODO(后续任务重写): note/release_tags/group_tags 已从 CollectionItem 模型移除。
+    collection = CollectionItem(anime_id=anime.id)
     db.add(collection)
     db.commit()
 
@@ -42,9 +43,38 @@ def test_upsert_records_deduplicates_and_preserves_collection() -> None:
     anime = db.scalar(select(AnimeMaster).where(AnimeMaster.source_id == "alpha"))
     collection = db.scalar(select(CollectionItem).where(CollectionItem.anime_id == anime.id))
     assert anime.platforms == "Netflix"
-    assert collection.note == "手工备注"
-    assert collection.release_tags == ["BDRip"]
-    assert collection.group_tags == ["ANi"]
+    assert collection is not None
+
+
+def test_upsert_records_populates_and_refreshes_series_fields() -> None:
+    db = make_session()
+    records = [
+        AnimeSourceRecord(
+            title_cn="鬼灭之刃 游郭篇",
+            source_id="kimetsu-2",
+            source_url="https://youranimes.tw/anime/kimetsu-2",
+            year=2021,
+            season=4,
+        )
+    ]
+
+    created, updated = upsert_records(db, records)
+    assert (created, updated) == (1, 0)
+
+    anime = db.scalar(select(AnimeMaster).where(AnimeMaster.source_id == "kimetsu-2"))
+    assert anime is not None
+    assert anime.series_key == "鬼灭之刃"
+    assert anime.series_title == "鬼灭之刃"
+    assert anime.season_label == "游郭篇"
+
+    records[0].title_cn = "鬼灭之刃 刀匠村篇"
+    created, updated = upsert_records(db, records)
+
+    assert (created, updated) == (0, 1)
+    anime = db.scalar(select(AnimeMaster).where(AnimeMaster.source_id == "kimetsu-2"))
+    assert anime.series_key == "鬼灭之刃"
+    assert anime.series_title == "鬼灭之刃"
+    assert anime.season_label == "刀匠村篇"
 
 
 def test_upsert_records_handles_duplicate_source_ids_in_same_batch() -> None:
@@ -96,7 +126,8 @@ def test_replace_season_prunes_stale_uncollected_rows_and_keeps_collected() -> N
     )
     db.add_all([stale, kept])
     db.flush()
-    db.add(CollectionItem(anime_id=kept.id, note="保留"))
+    # TODO(后续任务重写): note 已从 CollectionItem 模型移除。
+    db.add(CollectionItem(anime_id=kept.id))
     db.commit()
 
     records = [

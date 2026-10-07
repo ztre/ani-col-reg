@@ -1,26 +1,23 @@
-import type { AppSettings, AppSettingsUpdate, CollectionResetAction, MaintenanceAction } from '../types'
+import type { AppSettings } from '../types'
 
 import { request } from './http'
 
-export function getSettings(): Promise<AppSettings> {
+export interface AppSettingsUpdatePayload {
+  app_name?: string
+  default_search_year?: number
+  default_search_season?: number | null
+  default_page_size?: number
+  current_password?: string
+  new_password?: string
+}
+
+export function fetchAppSettings(): Promise<AppSettings> {
   return request<AppSettings>('/api/settings')
 }
 
-export function updateSettings(payload: AppSettingsUpdate): Promise<AppSettings> {
+export function updateAppSettings(payload: AppSettingsUpdatePayload): Promise<AppSettings> {
   return request<AppSettings>('/api/settings', {
     method: 'PUT',
     body: JSON.stringify(payload)
-  })
-}
-
-export function clearCoverCache(): Promise<MaintenanceAction> {
-  return request<MaintenanceAction>('/api/settings/maintenance/clear-cover-cache', {
-    method: 'POST'
-  })
-}
-
-export function resetCollectionData(): Promise<CollectionResetAction> {
-  return request<CollectionResetAction>('/api/settings/maintenance/reset-collection-data', {
-    method: 'POST'
   })
 }

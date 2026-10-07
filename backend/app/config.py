@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     cover_cache_public_path: str = "/api/covers"
     auth_token_ttl_hours: int = 168
     auth_default_username: str = "admin"
-    auth_default_password: str = "ani-col-reg"
+    auth_default_password: str = "adminadmin"
 
     model_config = SettingsConfigDict(env_file=str(ENV_FILE), env_prefix="ANI_COL_")
 

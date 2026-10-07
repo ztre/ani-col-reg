@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from app.api import router
 from app.config import get_settings
 from app.database import SessionLocal, init_db
+from app.log_handler import register_db_log_handler
 from app.logging_filters import configure_uvicorn_access_log_filters
 from app.services.cover_cache import CoverStaticFiles, clear_missing_cached_cover_references
 
@@ -15,6 +16,8 @@ from app.services.cover_cache import CoverStaticFiles, clear_missing_cached_cove
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    register_db_log_handler()  # "app.*" 命名空间的应用日志
+    register_db_log_handler(logger_name="uvicorn.error")  # uvicorn 服务器事件（排除 HTTP 访问日志）
     settings = get_settings()
     with SessionLocal() as db:
         clear_missing_cached_cover_references(

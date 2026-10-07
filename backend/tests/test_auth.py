@@ -20,7 +20,7 @@ def make_store(tmp_path) -> AppSettingsStore:
         default_library_subcopy="默认说明文案",
         default_search_year=2026,
         default_admin_username="admin",
-        default_admin_password="ani-col-reg",
+        default_admin_password="adminadmin",
     )
 
 
@@ -43,7 +43,7 @@ def test_login_status_and_password_rotation(tmp_path) -> None:
     assert initial_status.requires_password_change is True
     assert initial_status.default_search_season == current_default_season()
 
-    response = login(LoginRequest(username="admin", password="ani-col-reg"), store=store)
+    response = login(LoginRequest(username="admin", password="adminadmin"), store=store)
     assert response.user.username == "admin"
     assert response.status.authenticated is True
 
@@ -51,7 +51,7 @@ def test_login_status_and_password_rotation(tmp_path) -> None:
     assert status.authenticated is True
 
     updated = update_app_settings(
-        AppSettingsUpdate(app_name="新的番剧库", current_password="ani-col-reg", new_password="safe-pass"),
+        AppSettingsUpdate(app_name="新的番剧库", current_password="adminadmin", new_password="safe-pass"),
         store=store,
         db=db,
     )
@@ -59,7 +59,7 @@ def test_login_status_and_password_rotation(tmp_path) -> None:
     assert updated.requires_password_change is False
 
     try:
-        login(LoginRequest(username="admin", password="ani-col-reg"), store=store)
+        login(LoginRequest(username="admin", password="adminadmin"), store=store)
     except HTTPException as exc:
         assert exc.status_code == 401
     else:
@@ -93,7 +93,8 @@ def test_settings_include_sync_defaults_and_cover_cache_actions(tmp_path, monkey
 
     db.add_all(
         [
-            CollectionItem(anime_id=anime.id, note="保留测试"),
+            # TODO(后续任务重写): note 已从 CollectionItem 模型移除。
+            CollectionItem(anime_id=anime.id),
             AnimeMapping(anime_id=anime.id, mgr_item_id="mgr-alpha"),
             EpisodeProgress(anime_id=anime.id, watched_eps=3),
         ]
@@ -180,7 +181,8 @@ def test_reset_collection_maintenance_only_clears_collection_items(tmp_path) -> 
 
     db.add_all(
         [
-            CollectionItem(anime_id=anime.id, note="待清理"),
+            # TODO(后续任务重写): note 已从 CollectionItem 模型移除。
+            CollectionItem(anime_id=anime.id),
             AnimeMapping(anime_id=anime.id, mgr_item_id="mgr-reset-alpha"),
             EpisodeProgress(anime_id=anime.id, watched_eps=4),
         ]

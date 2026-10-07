@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models import AnimeMaster, AnimeMapping, CollectionItem, EpisodeProgress
 from app.services.scraper import AnimeSourceRecord, normalize_title
+from app.services.series import extract_series_info
 
 
 DEFAULT_SOURCE = "youranimes"
@@ -25,6 +26,7 @@ def upsert_records(
     for record, normalized in prepared_records:
         existing = _resolve_existing(existing_by_source, existing_by_scope, record, normalized, db, source=source)
         if existing is None:
+            series_info = extract_series_info(record.title_cn)
             anime = AnimeMaster(
                 source=source,
                 source_id=record.source_id,
@@ -44,6 +46,9 @@ def upsert_records(
                 tags=record.tags,
                 pv_url=record.pv_url,
                 cover_url=record.cover_url,
+                series_key=series_info.series_key,
+                series_title=series_info.series_title,
+                season_label=series_info.season_label,
             )
             db.add(anime)
             db.flush()
@@ -109,6 +114,10 @@ def _update_source_fields(anime: AnimeMaster, record: AnimeSourceRecord, normali
     anime.tags = record.tags
     anime.pv_url = record.pv_url
     anime.cover_url = record.cover_url or anime.cover_url
+    series_info = extract_series_info(record.title_cn)
+    anime.series_key = series_info.series_key
+    anime.series_title = series_info.series_title
+    anime.season_label = series_info.season_label
 
 
 def _deduplicate_records(records: list[AnimeSourceRecord]) -> tuple[list[tuple[AnimeSourceRecord, str]], int]:
@@ -226,7 +235,7 @@ def _merge_anime_rows(db: Session, *, source_row: AnimeMaster, target_row: Anime
         if target_row.collection_item is None:
             source_row.collection_item.anime_id = target_row.id
         else:
-            _merge_collection(source_row.collection_item, target_row.collection_item)
+            # TODO(后续任务重写): CollectionItem 已无 note/tags 等可合并字段，直接删除多余行。
             db.delete(source_row.collection_item)
 
     if source_row.progress is not None:
@@ -246,15 +255,6 @@ def _merge_anime_rows(db: Session, *, source_row: AnimeMaster, target_row: Anime
     source_row.source_id = None
     db.flush()
     db.delete(source_row)
-
-
-def _merge_collection(source: CollectionItem, target: CollectionItem) -> None:
-    if not target.note and source.note:
-        target.note = source.note
-    if not target.release_tags and source.release_tags:
-        target.release_tags = source.release_tags
-    if not target.group_tags and source.group_tags:
-        target.group_tags = source.group_tags
 
 
 def _merge_progress(source: EpisodeProgress, target: EpisodeProgress) -> None:
