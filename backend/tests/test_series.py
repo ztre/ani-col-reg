@@ -45,6 +45,15 @@ def test_trailing_wave_dash_does_not_split_series() -> None:
     assert with_dash.series_key == season2.series_key
 
 
+def test_combined_suffix_label_orders_season_before_split() -> None:
+    """组合后缀展示顺序：先季数（第X季），再分段（第X季度/篇）。"""
+    split_cour = extract_series_info("無職轉生 ～到了異世界就拿出真本事～ 第三季 第二季度")
+    assert split_cour.season_label == "第三季 第二季度"
+
+    season_with_arc = extract_series_info("作品名 4th season 喪失篇")
+    assert season_with_arc.season_label == "4th season 喪失篇"
+
+
 def test_violet_evergarden_titles_stay_independent() -> None:
     tv = extract_series_info("紫罗兰永恒花园")
     movie = extract_series_info("紫罗兰永恒花园 剧场版")

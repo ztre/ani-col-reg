@@ -105,8 +105,14 @@ def _update_source_fields(anime: AnimeMaster, record: AnimeSourceRecord, normali
     anime.normalized_title = normalized
     anime.aliases = record.aliases
     anime.synopsis = record.synopsis
-    anime.year = record.year
-    anime.season = record.season
+    # 已确认"待播（season=0）"的条目，若列表归属年份与待播年份不同
+    # （源站把预告条目挂在当前季度表下），不回写列表的年份/季度猜测值；
+    # 年份一致时说明源站已将其归入正式季度表，正常采信。
+    if anime.season == 0 and record.unaired_year is None and record.year != anime.year:
+        pass
+    else:
+        anime.year = record.year
+        anime.season = record.season
     anime.premiere_date = record.premiere_date
     anime.platforms = record.platforms
     anime.staff = record.staff

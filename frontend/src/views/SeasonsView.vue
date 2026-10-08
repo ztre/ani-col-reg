@@ -95,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthSession } from '../auth'
@@ -230,11 +230,12 @@ function seasonCacheKey(year: number, season: number): string {
 
 function defaultQuarter(): { year: number; season: number } {
   const status = session.state.status
-  if (status?.default_search_season) {
-    return { year: status.default_search_year, season: status.default_search_season }
-  }
   const now = new Date()
-  return { year: now.getFullYear(), season: Math.floor(now.getMonth() / 3) + 1 }
+  // 年份/季度为 null（自动）时跟随当前日期
+  return {
+    year: status?.default_search_year ?? now.getFullYear(),
+    season: status?.default_search_season ?? Math.floor(now.getMonth() / 3) + 1
+  }
 }
 
 async function loadSeasonOptions() {
@@ -551,6 +552,26 @@ onMounted(() => {
   void loadSeasonOptions()
 })
 
+// KeepAlive 失活时记录滚动位置（滚动容器 .app-body 在组件外，切到详情页后会被改写）
+let savedScrollTop = 0
+
+onDeactivated(() => {
+  savedScrollTop = scrollTarget instanceof HTMLElement ? scrollTarget.scrollTop : window.scrollY
+})
+
+// 激活时恢复：等 DOM 重新插入并渲染后再写回滚动位置
+onActivated(() => {
+  void nextTick().then(() => {
+    requestAnimationFrame(() => {
+      if (scrollTarget instanceof HTMLElement) {
+        scrollTarget.scrollTop = savedScrollTop
+      } else {
+        window.scrollTo({ top: savedScrollTop })
+      }
+    })
+  })
+})
+
 onBeforeUnmount(() => {
   requestSeq += 1
   detachTouchListeners()
@@ -584,19 +605,29 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
+/* 触控区 44×44（iOS HIG 最小标准），视觉圆 30px 由 ::before 绘制（内缩 7px） */
 .icon-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: var(--fill);
+  background: transparent;
   color: var(--accent);
   cursor: pointer;
-  transition: background-color 200ms ease;
+  transition: opacity 200ms ease;
+}
+
+.icon-button::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 999px;
+  background: var(--fill);
 }
 
 .icon-button:disabled {
@@ -605,6 +636,7 @@ onBeforeUnmount(() => {
 }
 
 .icon-button svg {
+  position: relative;
   width: 16px;
   height: 16px;
 }
@@ -619,22 +651,35 @@ onBeforeUnmount(() => {
   }
 }
 
+/* 触控区高度 44px（iOS HIG 最小标准），视觉胶囊 30px 由 ::before 绘制（上下内缩 7px） */
 .year-button {
+  position: relative;
+  /* 创建层叠上下文，让 ::before 沉到文字下方 */
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  height: 30px;
+  height: 44px;
   padding: 0 11px;
   border-radius: 999px;
-  background: var(--fill);
+  background: transparent;
   color: var(--accent);
   font-size: 15px;
   font-weight: 600;
   line-height: 1;
-  transition: background-color 200ms ease;
+}
+
+.year-button::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 7px 0;
+  border-radius: 999px;
+  background: var(--fill);
 }
 
 .year-button svg {
+  position: relative;
   width: 12px;
   height: 12px;
 }
@@ -758,7 +803,7 @@ onBeforeUnmount(() => {
 }
 
 .year-grid-item {
-  height: 40px;
+  height: 44px;
   border-radius: 12px;
   background: var(--fill);
   color: var(--text-primary);

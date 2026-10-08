@@ -115,7 +115,11 @@ async def import_anime(payload: ImportRequest, db: Session = Depends(get_db)) ->
     except httpx.HTTPError:
         raise HTTPException(status_code=502, detail='数据源搜索暂不可用')
 
-    record.year, record.season = _resolve_year_season(record.premiere_date)
+    # 待播条目（源站仅给出首播年份）：年份采信源站，季度未定置 0，不猜测。
+    if record.unaired_year is not None:
+        record.year, record.season = record.unaired_year, 0
+    else:
+        record.year, record.season = _resolve_year_season(record.premiere_date)
     created, updated = upsert_records(db, [record], source='youranimes')
     logger.info('数据源导入 source_id=%s 完成: 新增 %d 条，更新 %d 条', source_id, created, updated)
 

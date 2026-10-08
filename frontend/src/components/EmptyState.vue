@@ -99,7 +99,7 @@ const emit = defineEmits<{ action: [] }>()
   gap: 7px;
   margin-top: 18px;
   padding: 0 22px;
-  height: 36px;
+  height: 44px;
   border: none;
   border-radius: 999px;
   background: var(--fill);

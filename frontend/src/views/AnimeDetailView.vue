@@ -31,15 +31,20 @@
       </div>
 
       <section class="info">
-        <h1 class="info-title">{{ anime.title_cn }}</h1>
-        <p v-if="subtitle" class="info-subtitle">{{ subtitle }}</p>
-        <p v-if="metaLine" class="info-meta">{{ metaLine }}</p>
-        <p v-if="anime.platforms" class="info-platforms">{{ anime.platforms }}</p>
-        <p v-if="anime.detail_refreshing" class="refreshing-hint">
-          <span class="refreshing-spinner" aria-hidden="true" />
-          <span>详细信息刷新中…</span>
-        </p>
-        <div class="info-actions">
+        <!-- 桌面端完整海报卡片（移动端隐藏，由 hero 大图承担） -->
+        <div v-if="anime.cover_url && !coverFailed" class="info-poster" aria-hidden="true">
+          <img :src="anime.cover_url" alt="" @error="coverFailed = true" />
+        </div>
+        <div class="info-main">
+          <h1 class="info-title">{{ anime.title_cn }}</h1>
+          <p v-if="subtitle" class="info-subtitle">{{ subtitle }}</p>
+          <p v-if="metaLine" class="info-meta">{{ metaLine }}</p>
+          <p v-if="anime.platforms" class="info-platforms">{{ anime.platforms }}</p>
+          <p v-if="anime.detail_refreshing" class="refreshing-hint">
+            <span class="refreshing-spinner" aria-hidden="true" />
+            <span>详细信息刷新中…</span>
+          </p>
+          <div class="info-actions">
           <button
             type="button"
             class="collect-btn"
@@ -68,6 +73,7 @@
             </svg>
             <span>{{ anime.is_collected ? '已收藏' : '收藏' }}</span>
           </button>
+          </div>
         </div>
       </section>
 
@@ -192,6 +198,9 @@ const metaLine = computed(() => {
   const seasonName = SEASON_NAMES[current.season]
   if (seasonName) {
     parts.push(`${seasonName}季`)
+  } else if (current.season === 0) {
+    // 季度未定（源站仅给出首播年份，尚待播出）
+    parts.push('待播')
   }
   if (current.premiere_date) {
     parts.push(`首播 ${current.premiere_date}`)
@@ -371,11 +380,64 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
+/* 桌面端：banner 作模糊氛围背景，完整海报以卡片形式并排展示（避免竖版海报全宽裁剪） */
+@media (min-width: 1024px) {
+  .hero {
+    height: 250px;
+    min-height: 0;
+  }
+
+  .hero-img {
+    filter: blur(26px) brightness(0.72) saturate(1.15);
+    transform: scale(1.25);
+  }
+
+  /* 有海报卡片时：上提跨坐 banner 底沿，海报左、标题右 */
+  .info:has(.info-poster) {
+    max-width: 828px;
+    margin: -140px auto 0;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 186px 1fr;
+    column-gap: 28px;
+  }
+
+  /* 文字推到 banner 之下，保证落在纯底色区域可读 */
+  .info:has(.info-poster) .info-main {
+    min-width: 0;
+    padding-top: 150px;
+  }
+}
+
 /* ---------- 信息区 ---------- */
 .info {
   position: relative;
   margin-top: -38px;
   padding: 0 20px;
+}
+
+/* 完整海报卡片：仅桌面端展示（移动端由 hero 大图承担） */
+.info-poster {
+  display: none;
+}
+
+/* 高度随图片自适应：竖版海报 2:3，横版宣传图也不裁剪 */
+.info-poster img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+@media (min-width: 1024px) {
+  .info-poster {
+    display: block;
+    align-self: start;
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--bg-elevated);
+    box-shadow: var(--card-shadow);
+  }
 }
 
 .info-title {
@@ -434,7 +496,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  height: 40px;
+  height: 44px;
   padding: 0 26px;
   border-radius: 999px;
   background: var(--fill);
@@ -504,8 +566,10 @@ onBeforeUnmount(() => {
 }
 
 .expand-btn {
-  margin-top: 10px;
-  padding: 2px 0;
+  min-width: 44px;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 12px 0;
   color: var(--accent);
   font-size: 14px;
   font-weight: 500;

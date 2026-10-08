@@ -145,7 +145,8 @@ const props = defineProps<{
 }>()
 
 const SEASON_NAMES: Record<number, string> = { 1: '冬', 2: '春', 3: '夏', 4: '秋' }
-const FALLBACK_PAGE_SIZE = 200
+// 后端 /api/anime 校验 page_size ≤ 100，超出会 422
+const FALLBACK_PAGE_SIZE = 100
 const MAX_FALLBACK_PAGES = 5
 
 const router = useRouter()
@@ -198,7 +199,8 @@ const sortedEntries = computed(() => {
 })
 
 function seasonName(season: number): string {
-  return SEASON_NAMES[season] ?? ''
+  // 0 = 源站未确定季度（尚待播出）
+  return SEASON_NAMES[season] ?? (season === 0 ? '待播' : '')
 }
 
 function initialOf(entry: Anime): string {
@@ -407,7 +409,7 @@ onMounted(load)
 .retry-button {
   align-self: center;
   margin-top: -36px;
-  padding: 8px 32px;
+  padding: 12px 32px;
   border-radius: 999px;
   background: var(--fill);
   color: var(--accent);

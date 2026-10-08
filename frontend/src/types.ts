@@ -83,7 +83,7 @@ export interface AuthStatus {
   user: { username: string } | null
   app_name: string
   library_subcopy: string
-  default_search_year: number
+  default_search_year: number | null
   default_search_season: number | null
   default_page_size: number
   requires_password_change: boolean
@@ -99,7 +99,7 @@ export interface AppSettings {
   app_name: string
   library_subcopy: string
   anime_source: 'youranimes' | 'mikan'
-  default_search_year: number
+  default_search_year: number | null
   default_search_season: number | null
   default_page_size: number
   default_filter_collected: boolean

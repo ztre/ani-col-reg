@@ -59,9 +59,11 @@
       <div class="app-body-inner">
         <RouterView v-slot="{ Component, route: viewRoute }">
           <Transition :name="transitionName" mode="out-in">
-            <!-- 缓存主 Tab 视图：搜索条件/结果在 Tab 切换与详情页往返时不丢失 -->
-            <KeepAlive :include="['SearchView', 'CollectionView']">
-              <component :is="Component" :key="viewRoute.name" />
+            <!-- 缓存主 Tab 视图：筛选条件/滚动位置在 Tab 切换与详情页往返时不丢失。
+                 key 用 path：详情页参数变化（/anime/599 → /anime/600）时强制重建组件重载数据；
+                 Tab 页 path 恒定，缓存键不受影响 -->
+            <KeepAlive :include="['SeasonsView', 'SearchView', 'CollectionView']">
+              <component :is="Component" :key="viewRoute.path" />
             </KeepAlive>
           </Transition>
         </RouterView>

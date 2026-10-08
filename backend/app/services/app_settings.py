@@ -28,7 +28,7 @@ class StoredAppSettings(BaseModel):
     app_name: str
     library_subcopy: str
     anime_source: str = "youranimes"
-    default_search_year: int
+    default_search_year: int | None = None
     default_search_season: int | None = None
     default_page_size: int = 24
     default_filter_collected: bool = False
@@ -49,14 +49,12 @@ class AppSettingsStore:
         *,
         default_app_name: str,
         default_library_subcopy: str,
-        default_search_year: int,
         default_admin_username: str,
         default_admin_password: str,
     ) -> None:
         self.path = path
         self.default_app_name = default_app_name
         self.default_library_subcopy = default_library_subcopy
-        self.default_search_year = default_search_year
         self.default_admin_username = default_admin_username
         self.default_admin_password = default_admin_password
 
@@ -147,7 +145,7 @@ class AppSettingsStore:
             app_name=self.default_app_name,
             library_subcopy=self.default_library_subcopy,
             anime_source="youranimes",
-            default_search_year=self.default_search_year,
+            default_search_year=None,
             default_search_season=current_default_season(),
             default_page_size=24,
             default_filter_collected=False,

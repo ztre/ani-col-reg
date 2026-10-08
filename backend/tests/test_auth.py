@@ -18,7 +18,6 @@ def make_store(tmp_path) -> AppSettingsStore:
         tmp_path / "app_settings.json",
         default_app_name="番剧收藏登记系统",
         default_library_subcopy="默认说明文案",
-        default_search_year=2026,
         default_admin_username="admin",
         default_admin_password="adminadmin",
     )

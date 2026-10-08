@@ -47,20 +47,17 @@
         <div class="group-card">
           <div class="field-row">
             <label class="field-label" for="settings-year">默认年份</label>
-            <input
-              id="settings-year"
-              v-model="form.year"
-              class="field-input field-input--compact"
-              type="number"
-              min="1968"
-              max="2100"
-              inputmode="numeric"
-            />
+            <select id="settings-year" v-model="form.year" class="field-select">
+              <option value="">自动（跟随当前年份）</option>
+              <option v-for="year in yearOptions" :key="year" :value="String(year)">
+                {{ year }}
+              </option>
+            </select>
           </div>
           <div class="field-row">
             <label class="field-label" for="settings-season">默认季度</label>
             <select id="settings-season" v-model="form.season" class="field-select">
-              <option value="">不限</option>
+              <option value="">自动（跟随当前季度）</option>
               <option value="1">冬（1 月）</option>
               <option value="2">春（4 月）</option>
               <option value="3">夏（7 月）</option>
@@ -190,10 +187,19 @@ const dataSourceName = computed(() =>
 function applySettings(next: AppSettings) {
   settings.value = next
   form.appName = next.app_name
-  form.year = String(next.default_search_year)
+  form.year = next.default_search_year === null ? '' : String(next.default_search_year)
   form.season = next.default_search_season === null ? '' : String(next.default_search_season)
   form.pageSize = String(next.default_page_size)
 }
+
+// 年份候选：下一年（数据源常提前放出次年预告）至 1968，与导视页年份弹层一致
+const yearOptions = computed(() => {
+  const years: number[] = []
+  for (let year = new Date().getFullYear() + 1; year >= 1968; year -= 1) {
+    years.push(year)
+  }
+  return years
+})
 
 async function load() {
   loading.value = true
@@ -237,9 +243,12 @@ function validate(): string {
     return '应用名不能为空'
   }
 
-  const year = Number(form.year)
-  if (!Number.isInteger(year) || year < 1968 || year > 2100) {
-    return '默认年份需在 1968–2100 之间'
+  // 年份为空 = 自动（跟随当前年份），跳过范围校验
+  if (form.year) {
+    const year = Number(form.year)
+    if (!Number.isInteger(year) || year < 1968 || year > 2100) {
+      return '默认年份需在 1968–2100 之间'
+    }
   }
 
   const pageSize = Number(form.pageSize)
@@ -276,7 +285,7 @@ async function save() {
 
   const payload: AppSettingsUpdatePayload = {
     app_name: form.appName.trim(),
-    default_search_year: Number(form.year),
+    default_search_year: form.year ? Number(form.year) : null,
     default_search_season: form.season ? Number(form.season) : null,
     default_page_size: Number(form.pageSize)
   }
@@ -344,7 +353,7 @@ onBeforeUnmount(() => {
 .retry-button {
   align-self: center;
   margin-top: -36px;
-  padding: 8px 32px;
+  padding: 12px 32px;
   border-radius: 999px;
   background: var(--fill);
   color: var(--accent);

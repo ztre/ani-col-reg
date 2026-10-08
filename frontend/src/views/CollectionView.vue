@@ -201,7 +201,7 @@ onActivated(load)
 .retry-button {
   align-self: center;
   margin-top: -36px;
-  padding: 8px 32px;
+  padding: 12px 32px;
   border-radius: 999px;
   background: var(--fill);
   color: var(--accent);

@@ -99,6 +99,68 @@ def test_parse_youranimes_detail_html_extracts_detail_sections() -> None:
         assert record.cover_url == "https://cdn.example.test/detail-alpha.webp"
 
 
+def test_parse_detail_html_unaired_premiere_not_faked_from_news_date() -> None:
+    """待播条目（首播仅年份）不应从“消息更新”区块误抓资讯日期。"""
+    html = """
+    <html>
+        <head><meta property="og:title" content="未播测试番"></head>
+        <body>
+            <h1>未播测试番</h1>
+            <div>
+                <span>首播<!-- --> <b class="font-ya-mono">2027</b></span><span>尚待播出</span>
+            </div>
+            <section>
+                <h2>消息更新</h2>
+                <ul>
+                    <li>
+                        <span class="font-ya-mono">2026-09-27</span>
+                        <span>宣布2027年播出</span>
+                    </li>
+                </ul>
+            </section>
+            <section>
+                <h2>播出決定宣傳影片</h2>
+                <p>其他內容</p>
+            </section>
+        </body>
+    </html>
+    """
+
+    record = parse_detail_html(
+        html,
+        "https://youranimes.tw",
+        "https://youranimes.tw/animes/unaired",
+        fallback=AnimeSourceRecord(title_cn="未播测试番", source_id="unaired", source_url=None, year=2026, season=3),
+    )
+
+    # 首播仅有年份（待播）：不伪造日期，也不误抓资讯日期 2026-09-27
+    assert record.premiere_date is None
+    # 待播年份透出，供调用方将季度置为未定（0）
+    assert record.unaired_year == 2027
+
+
+def test_parse_detail_html_aired_premiere_extracted_from_info_dom() -> None:
+    """已播条目从信息区 DOM 提取完整首播日期。"""
+    html = """
+    <html>
+        <head><meta property="og:title" content="已播测试番"></head>
+        <body>
+            <h1>已播测试番</h1>
+            <div><span>首播<!-- --> <b class="font-ya-mono">2021-01-11</b></span></div>
+        </body>
+    </html>
+    """
+
+    record = parse_detail_html(
+        html,
+        "https://youranimes.tw",
+        "https://youranimes.tw/animes/aired",
+        fallback=AnimeSourceRecord(title_cn="已播测试番", source_id="aired", source_url=None, year=2021, season=1),
+    )
+
+    assert record.premiere_date == "2021-01-11"
+
+
 def test_parse_mikan_season_html_fixture() -> None:
         html = Path("tests/fixtures/mikan_cover_flow.html").read_text(encoding="utf-8")
 

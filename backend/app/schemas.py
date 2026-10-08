@@ -90,7 +90,7 @@ class AuthStatusOut(BaseModel):
     user: AuthUserOut | None = None
     app_name: str
     library_subcopy: str
-    default_search_year: int
+    default_search_year: int | None = None
     default_search_season: int | None = None
     default_page_size: int
     default_filter_collected: bool = False
@@ -122,7 +122,7 @@ class AppSettingsOut(BaseModel):
     app_name: str
     library_subcopy: str
     anime_source: Literal["youranimes", "mikan"]
-    default_search_year: int
+    default_search_year: int | None = None
     default_search_season: int | None = None
     default_page_size: int
     default_filter_collected: bool = False

@@ -36,6 +36,8 @@ class AnimeSourceRecord:
     tags: str | None = None
     pv_url: str | None = None
     cover_url: str | None = None
+    # 详情页明确标注"首播仅年份（尚待播出）"时的年份；此时源站未确定季度。
+    unaired_year: int | None = None
 
 
 def normalize_title(title: str) -> str:
@@ -140,6 +142,14 @@ def parse_detail_html(html: str, base_url: str, source_url: str, *, fallback: An
     pv_url = _section_first_link(soup, ["宣傳影片", "宣传影片", "PV"], base_url)
     cover_url = _meta_content(soup, property_name="og:image") or fallback.cover_url
 
+    # 首播：优先读信息区 DOM；找到"首播"字段但没有完整日期（仅年份=待播）时，
+    # 不再走整页正则兜底——那会把"消息更新"区块的资讯日期误当首播。
+    premiere, unaired_year = _extract_premiere_from_soup(soup)
+    if unaired_year is not None:
+        premiere_date = fallback.premiere_date
+    else:
+        premiere_date = premiere or _extract_date(page_text) or fallback.premiere_date
+
     return AnimeSourceRecord(
         title_cn=_first_non_empty(_meta_content(soup, property_name="og:title"), _headline_text(soup), fallback.title_cn) or fallback.title_cn,
         source_id=_source_id_from_url(source_url) or fallback.source_id,
@@ -150,13 +160,14 @@ def parse_detail_html(html: str, base_url: str, source_url: str, *, fallback: An
         title_en=fallback.title_en,
         aliases=fallback.aliases,
         synopsis=synopsis or fallback.synopsis,
-        premiere_date=_extract_date(page_text) or fallback.premiere_date,
+        premiere_date=premiere_date,
         platforms=platforms or fallback.platforms,
         staff=staff or fallback.staff,
         cast=cast or fallback.cast,
         tags=tags or fallback.tags,
         pv_url=pv_url or fallback.pv_url,
         cover_url=urljoin(base_url, cover_url) if cover_url else fallback.cover_url,
+        unaired_year=unaired_year,
     )
 
 
@@ -344,15 +355,39 @@ def _section_first_link(soup: BeautifulSoup, labels: list[str], base_url: str) -
 
 
 def _extract_date(text: str) -> str | None:
+    # 标签词与日期之间最多 12 个字符，防止跨区块匹配
+    # （如 "播出決定宣傳影片" 资讯标题后跨越大段文本误抓资讯日期）。
     patterns = [
-        r"首映日期[^\d]*(\d{4}-\d{2}-\d{2})",
-        r"(?:首播|播出|開播)[^\d]*(\d{4}-\d{2}-\d{2})",
+        r"首映日期[^\d]{0,12}(\d{4}-\d{2}-\d{2})",
+        r"(?:首播|播出|開播)[^\d]{0,12}(\d{4}-\d{2}-\d{2})",
     ]
     for pattern in patterns:
         match = re.search(pattern, text)
         if match:
             return match.group(1)
     return None
+
+
+def _extract_premiere_from_soup(soup: BeautifulSoup) -> tuple[str | None, int | None]:
+    """从详情页信息区 DOM 精确提取首播字段。
+
+    源站两种形态（信息区 <span> 内）：
+    - 已播出：<span>首播 <b>2021-01-11</b></span> → (日期, None)
+    - 未播出：<span>首播 <b>2027</b></span><span>尚待播出</span> → (None, 2027)
+      （仅年份：源站未确定播出季度）
+    """
+    for span in soup.find_all("span"):
+        text = _collapse_whitespace(span.get_text(" ", strip=True))
+        if not text.startswith("首播"):
+            continue
+        bold = span.find("b")
+        value = _collapse_whitespace(bold.get_text(strip=True)) if bold else None
+        if value and re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            return value, None
+        if value and re.fullmatch(r"\d{4}", value):
+            return None, int(value)
+        return None, None
+    return None, None
 
 
 def _join_tokens(values: list[str]) -> str | None:

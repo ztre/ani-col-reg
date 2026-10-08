@@ -86,7 +86,7 @@
             class="source-item"
             :class="{ 'is-local': item.isCollected }"
             :disabled="importingId !== null"
-            :aria-label="item.isCollected ? '查看详情' : '加入收藏'"
+            :aria-label="item.isCollected ? '查看详情' : '收藏'"
             @click="onSourceItemClick(item)"
           >
             <span class="source-cover">
@@ -107,20 +107,9 @@
               </span>
             </span>
             <span v-if="importingId === item.source_id" class="source-spinner" aria-hidden="true" />
-            <svg
-              v-else-if="!item.isCollected"
-              class="source-add"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-            >
-              <path d="M12 5v14M5 12h14" />
-            </svg>
             <!-- 已收藏：对勾标识，点击直达详情 -->
             <svg
-              v-else
+              v-else-if="item.isCollected"
               class="source-added"
               viewBox="0 0 24 24"
               fill="none"
@@ -128,8 +117,22 @@
               stroke-width="2.4"
               stroke-linecap="round"
               stroke-linejoin="round"
+              aria-hidden="true"
             >
               <path d="M4.5 12.5l5 5L19.5 7" />
+            </svg>
+            <!-- 未收藏：加号，点击收藏（在库直接收藏，未在库导入并收藏） -->
+            <svg
+              v-else
+              class="source-add"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14" />
             </svg>
           </button>
         </div>
@@ -149,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import EmptyState from '../components/EmptyState.vue'
@@ -437,6 +440,19 @@ onDeactivated(() => {
   requestSeq += 1
 })
 
+// keep-alive 返回本页时刷新收藏索引：详情/导视页可能已新增收藏或导入，
+// 否则已入库作品会继续显示"待新增"加号
+onActivated(() => {
+  fetchCollectedSeries()
+    .then((groups) => {
+      collectedGroups.value = groups
+      rebuildLocalIndex()
+    })
+    .catch(() => {
+      // 拉取失败保留旧索引，仅状态标记可能滞后
+    })
+})
+
 onBeforeUnmount(() => {
   window.clearTimeout(debounceTimer)
   requestSeq += 1
@@ -516,13 +532,15 @@ onBeforeUnmount(() => {
   display: none;
 }
 
+/* 触控区 44×44（iOS HIG 最小标准），负 margin 抵消超出 36px 输入框的部分，视觉保持紧凑 */
 .search-clear {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 44px;
+  height: 44px;
+  margin: -4px -10px -4px -8px;
   color: var(--text-tertiary);
   transition: opacity 200ms ease;
 }
@@ -736,7 +754,7 @@ onBeforeUnmount(() => {
 .retry-button {
   align-self: center;
   margin-top: -36px;
-  padding: 8px 32px;
+  padding: 12px 32px;
   border-radius: 999px;
   background: var(--fill);
   color: var(--accent);

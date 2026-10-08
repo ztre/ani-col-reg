@@ -38,7 +38,6 @@ def get_app_settings_store() -> AppSettingsStore:
         settings.app_settings_path,
         default_app_name=settings.app_name,
         default_library_subcopy=LIBRARY_DEFAULT_SUBCOPY,
-        default_search_year=datetime.now().year,
         default_admin_username=settings.auth_default_username,
         default_admin_password=settings.auth_default_password,
     )
@@ -214,6 +213,19 @@ def apply_detail_record(anime: AnimeMaster, detail: AnimeSourceRecord) -> None:
     anime.cover_url = detail.cover_url or anime.cover_url
     anime.source_id = detail.source_id or anime.source_id
     anime.source_url = detail.source_url or anime.source_url
+    # 源站明确标注"首播仅年份（尚待播出）"：采信待播年份，季度未定置 0，
+    # 不沿用同步列表时带来的季度猜测值。
+    if detail.unaired_year is not None:
+        anime.year = detail.unaired_year
+        anime.season = 0
+    # 正常条目拿到完整首播日期后，若季度仍是未定（0），按首播日期补全
+    elif detail.premiere_date and anime.season == 0:
+        try:
+            premiere = datetime.strptime(detail.premiere_date[:10], '%Y-%m-%d')
+        except ValueError:
+            return
+        anime.year = premiere.year
+        anime.season = (premiere.month - 1) // 3 + 1
 
 
 def repair_missing_cover_url(anime: AnimeMaster, settings) -> bool:

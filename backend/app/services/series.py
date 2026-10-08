@@ -25,7 +25,7 @@ class SeriesInfo:
 
 
 # 归一化算法版本：规则变更时递增，启动迁移将据此对存量数据全量重算。
-SERIES_ALGORITHM_VERSION = 3
+SERIES_ALGORITHM_VERSION = 4
 
 
 _RULE_CHINESE_SEASON_NUMERAL = rf"(?:[0-9]+|[{_CHINESE_NUMERALS}]+)"
@@ -112,7 +112,9 @@ def extract_series_info(title: str) -> SeriesInfo:
     return SeriesInfo(
         series_key=_normalize_series_key(current),
         series_title=current,
-        season_label=" ".join(labels) or None,
+        # labels 按剥离顺序（标题最外层→内层）收集，展示时反转为阅读顺序
+        # （如 "第三季 第二季度" 显示为先季数后分段，而非 "第二季度 第三季"）。
+        season_label=" ".join(reversed(labels)) or None,
     )
 
 

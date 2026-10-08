@@ -64,7 +64,7 @@
             </td>
             <td class="cell-source" :title="log.source">{{ log.source }}</td>
             <td class="cell-message" :title="expandedIds.has(log.id) ? '点击收起' : '点击展开'">
-              {{ log.message }}
+              <span class="cell-message-text">{{ log.message }}</span>
             </td>
           </tr>
         </tbody>
@@ -252,7 +252,7 @@ onMounted(load)
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 36px;
+  height: 44px;
   margin-left: auto;
   padding: 0 14px;
   border-radius: 10px;
@@ -306,7 +306,7 @@ onMounted(load)
 .retry-button {
   align-self: center;
   margin-top: -36px;
-  padding: 8px 32px;
+  padding: 12px 32px;
   border-radius: 999px;
   background: var(--fill);
   color: var(--accent);
@@ -384,19 +384,19 @@ onMounted(load)
 .cell-message {
   max-width: 460px;
   color: var(--text-primary);
-  word-break: break-word;
 }
 
 /* 长消息默认两行截断，点击行展开 */
-.cell-message {
+.cell-message-text {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
+  word-break: break-word;
 }
 
-.log-row.is-expanded .cell-message {
+.log-row.is-expanded .cell-message-text {
   display: block;
   -webkit-line-clamp: unset;
   line-clamp: unset;
@@ -449,7 +449,7 @@ onMounted(load)
 }
 
 .pagination-button {
-  height: 36px;
+  height: 44px;
   padding: 0 16px;
   border-radius: 12px;
   background: var(--fill);

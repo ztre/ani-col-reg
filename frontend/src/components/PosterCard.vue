@@ -97,25 +97,35 @@ const fallbackInitial = computed(() => props.anime.title_cn.trim().charAt(0) || 
   font-weight: 600;
 }
 
+/* 触控区 44×44（iOS 最小标准），视觉圆 28px 由 ::before 绘制（内缩 8px），
+   避免点偏落到卡片上误触进入详情页 */
 .poster-card-collect {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 0;
+  right: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   color: rgba(255, 255, 255, 0.92);
+  transition: color 200ms ease, transform 200ms ease;
+}
+
+.poster-card-collect::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 999px;
   background: var(--blur-bg);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   backdrop-filter: blur(12px) saturate(180%);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  transition: color 200ms ease, transform 200ms ease;
 }
 
 .poster-card-collect svg {
+  position: relative;
   width: 15px;
   height: 15px;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
